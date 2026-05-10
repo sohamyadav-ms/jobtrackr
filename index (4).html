@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobTrackr — My Job Search Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b0d;--surface:#13151a;--surface2:#1a1d24;--surface3:#22262f;--surface4:#2a2f3a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);
+  --text:#eeeae0;--text2:#b8b4aa;--muted:#6e7380;
+  --accent:#c8f05a;--accent-dim:rgba(200,240,90,0.12);
+  --accent2:#5af0b8;--accent2-dim:rgba(90,240,184,0.12);
+  --accent3:#f0805a;--accent3-dim:rgba(240,128,90,0.12);
+  --accent4:#5a9ef0;--accent4-dim:rgba(90,158,240,0.12);
+  --danger:#f05a5a;
+  --sidebar-w:220px;--font-display:'Fraunces',serif;--font-body:'Outfit',sans-serif;--font-mono:'DM Mono',monospace;
+  --r:12px;--r-sm:8px;--shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+a{color:inherit;text-decoration:none;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:var(--surface4);border-radius:99px;}
+
+/* LAYOUT */
+.shell{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:50;
+  transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+.sb-logo{
+  padding:1.2rem 1.2rem .6rem;
+  font-family:var(--font-display);font-size:1.3rem;font-weight:500;letter-spacing:-.02em;
+  display:flex;align-items:center;gap:8px;
+}
+.sb-logo span{color:var(--accent);}
+.sb-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);flex-shrink:0;}
+.sb-div{height:1px;background:var(--border);margin:.4rem 1rem;}
+.sb-sec{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.6rem 1.2rem .2rem;}
+.nav{
+  display:flex;align-items:center;gap:9px;padding:.55rem .9rem;margin:2px .55rem;
+  border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;border:1px solid transparent;
+}
+.nav:hover{background:var(--surface2);color:var(--text);}
+.nav.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(200,240,90,.2);}
+.nav-ic{font-size:15px;width:19px;text-align:center;flex-shrink:0;}
+.nav-badge{
+  margin-left:auto;min-width:19px;height:19px;border-radius:10px;
+  background:var(--surface3);color:var(--muted);font-size:10px;font-weight:600;
+  font-family:var(--font-mono);display:flex;align-items:center;justify-content:center;padding:0 4px;
+}
+.nav.active .nav-badge{background:rgba(200,240,90,.2);color:var(--accent);}
+.sb-bottom{margin-top:auto;padding:.8rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px;}
+
+/* HAMBURGER */
+.burger{
+  display:none;position:fixed;top:13px;left:13px;z-index:200;
+  width:34px;height:34px;border-radius:var(--r-sm);background:var(--surface2);
+  border:1px solid var(--border2);color:var(--text);cursor:pointer;font-size:15px;
+  align-items:center;justify-content:center;
+}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);z-index:49;}
+.sb-overlay.open{display:block;}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0;display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{
+  height:56px;border-bottom:1px solid var(--border);padding:0 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;background:rgba(10,11,13,.93);backdrop-filter:blur(16px);z-index:40;gap:10px;
+}
+.topbar-l{display:flex;align-items:center;gap:10px;}
+.page-title{font-family:var(--font-display);font-size:1.05rem;font-weight:500;letter-spacing:-.01em;}
+.topbar-r{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.badge{font-family:var(--font-mono);font-size:9px;padding:2px 7px;border-radius:4px;letter-spacing:.06em;}
+.b-owner{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,90,.25);}
+.b-ro{background:var(--accent3-dim);color:var(--accent3);border:1px solid rgba(240,128,90,.25);}
+
+/* BUTTONS */
+.btn{
+  font-family:var(--font-body);font-size:13px;font-weight:500;padding:6px 14px;
+  border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text);
+  cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;
+}
+.btn:hover{background:var(--surface3);border-color:var(--border3);}
+.btn-p{background:var(--accent);color:#090a0c;border-color:var(--accent);font-weight:600;}
+.btn-p:hover{background:#d8ff6a;border-color:#d8ff6a;}
+.btn-sm{font-size:11.5px;padding:4px 10px;}
+.btn-ic{padding:5px;width:30px;height:30px;justify-content:center;}
+.btn-d{background:rgba(240,90,90,.1);color:var(--danger);border-color:rgba(240,90,90,.25);}
+.btn-d:hover{background:rgba(240,90,90,.2);}
+.btn-g{background:transparent;border-color:transparent;color:var(--muted);}
+.btn-g:hover{background:var(--surface2);color:var(--text);border-color:var(--border);}
+
+/* PAGES */
+.page{display:none;padding:1.5rem;flex:1;}
+.page.active{display:block;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.75rem;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem 1.15rem;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc,var(--muted));opacity:.55;}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.sl{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.sv{font-family:var(--font-display);font-size:1.75rem;font-weight:600;line-height:1;color:var(--sc,var(--text));}
+.ss{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1.1rem;flex-wrap:wrap;}
+.sw{position:relative;flex:1;min-width:160px;max-width:300px;}
+.sw input{
+  width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);
+  padding:6px 11px 6px 32px;font-family:var(--font-body);font-size:13px;color:var(--text);outline:none;
+  transition:border-color .15s;
+}
+.sw input::placeholder{color:var(--muted);}
+.sw input:focus{border-color:rgba(200,240,90,.35);}
+.s-ic{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+.pills{display:flex;gap:5px;flex-wrap:wrap;}
+.pill{
+  font-size:11px;font-weight:500;padding:3px 11px;border-radius:20px;
+  border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.pill:hover{background:var(--surface2);border-color:var(--border2);color:var(--text);}
+.pill.active{background:var(--accent-dim);border-color:rgba(200,240,90,.3);color:var(--accent);}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px;}
+.app-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:1.1rem;cursor:pointer;transition:all .2s;
+  position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px;
+}
+.app-card:hover{background:var(--surface2);transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border2);}
+
+/* card top */
+.ct{display:flex;align-items:flex-start;gap:9px;}
+.ca{
+  width:40px;height:40px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:13px;font-weight:700;
+}
+.ci{flex:1;min-width:0;}
+.cco{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cro{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* status badge */
+.sb{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;letter-spacing:.03em;}
+.s-pending{background:rgba(192,90,240,.12);color:#d8a0f7;border:1px solid rgba(192,90,240,.22);}
+.s-applied{background:rgba(90,158,240,.14);color:#8ac4f7;border:1px solid rgba(90,158,240,.22);}
+.s-interviewing{background:rgba(200,240,90,.12);color:#d4f07a;border:1px solid rgba(200,240,90,.22);}
+.s-offer{background:rgba(90,240,184,.12);color:#7af5d0;border:1px solid rgba(90,240,184,.22);}
+.s-rejected{background:rgba(240,90,90,.1);color:#f7a0a0;border:1px solid rgba(240,90,90,.18);}
+.s-ghosted{background:rgba(138,143,154,.1);color:var(--muted);border:1px solid rgba(138,143,154,.18);}
+.s-withdrawn{background:rgba(240,128,90,.1);color:#f7b89a;border:1px solid rgba(240,128,90,.18);}
+
+/* progress track */
+.track{display:flex;gap:3px;}
+.ts{height:3px;flex:1;border-radius:2px;background:var(--surface3);transition:background .3s;}
+.ts.done{background:var(--accent);}
+.ts.cur{background:var(--accent4);}
+.ts.fail{background:var(--danger);}
+.ts.ghost{background:var(--muted);}
+
+/* meta chips */
+.meta{display:flex;flex-wrap:wrap;gap:6px;}
+.mc{
+  display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--muted);
+  font-family:var(--font-mono);background:var(--surface2);border:1px solid var(--border);
+  border-radius:5px;padding:2px 7px;
+}
+.mc a{color:var(--accent4);transition:color .15s;}
+.mc a:hover{color:var(--accent2);}
+.mc.cv-chip{color:var(--accent4);cursor:pointer;}
+.mc.cv-chip:hover{color:var(--accent);border-color:rgba(200,240,90,.2);}
+
+/* contact chips */
+.linked-contacts{display:flex;flex-wrap:wrap;gap:5px;}
+.cc{
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;
+  background:var(--accent4-dim);color:var(--accent4);border:1px solid rgba(90,158,240,.2);
+  border-radius:20px;padding:2px 9px;transition:all .15s;cursor:pointer;
+}
+.cc:hover{background:rgba(90,158,240,.2);color:#aad4ff;}
+
+.cnotes{
+  font-size:11.5px;color:var(--muted);line-height:1.5;background:var(--surface2);
+  border-radius:5px;padding:6px 9px;border-left:2px solid var(--surface4);
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+
+.card-actions{
+  display:flex;gap:5px;justify-content:flex-end;padding-top:7px;
+  border-top:1px solid var(--border);opacity:0;transition:opacity .2s;
+}
+.app-card:hover .card-actions{opacity:1;}
+
+/* CONNECTIONS */
+.conn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:11px;}
+.conn-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem 1.1rem;display:flex;align-items:center;gap:10px;
+  transition:all .2s;cursor:pointer;
+}
+.conn-card:hover{background:var(--surface2);border-color:var(--border2);transform:translateY(-1px);box-shadow:var(--shadow);}
+.cav{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:13px;font-weight:700;
+}
+.cn-info{flex:1;min-width:0;}
+.cn-name{font-weight:600;font-size:13.5px;}
+.cn-title{font-size:11.5px;color:var(--text2);margin-top:1px;}
+.cn-co{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.link-badge{
+  font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:10px;
+  background:var(--accent2-dim);color:var(--accent2);border:1px solid rgba(90,240,184,.2);white-space:nowrap;
+}
+.li-btn{
+  width:28px;height:28px;border-radius:6px;background:rgba(90,158,240,.1);
+  border:1px solid rgba(90,158,240,.2);color:var(--accent4);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  transition:all .15s;flex-shrink:0;
+}
+.li-btn:hover{background:rgba(90,158,240,.22);color:#aad4ff;}
+.cn-actions{display:flex;gap:4px;flex-shrink:0;}
+
+/* EMPTY */
+.empty{text-align:center;padding:4rem 2rem;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.empty-ic{font-size:3rem;opacity:.22;}
+.empty-t{font-family:var(--font-display);font-size:1.1rem;color:var(--text2);}
+.empty-s{font-size:13px;color:var(--muted);max-width:280px;line-height:1.6;}
+
+/* OVERLAY / MODAL */
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
+  backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;padding:1rem;
+}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);border-radius:16px;
+  width:100%;max-width:580px;max-height:92vh;overflow-y:auto;padding:1.6rem;
+  position:relative;box-shadow:var(--shadow);
+}
+.modal-sm{max-width:400px;}
+.modal-title{font-family:var(--font-display);font-size:1.15rem;font-weight:500;margin-bottom:1.15rem;}
+.mc-btn{
+  position:absolute;top:1rem;right:1rem;width:29px;height:29px;border-radius:6px;
+  border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;
+  font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.mc-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* FORM */
+.fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg.full{grid-column:1/-1;}
+.fl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.fi,.fs,.ft{
+  background:var(--bg);border:1px solid var(--border2);border-radius:var(--r-sm);
+  padding:7px 10px;font-family:var(--font-body);font-size:13px;color:var(--text);
+  outline:none;transition:border-color .15s;width:100%;
+}
+.fi:focus,.fs:focus,.ft:focus{border-color:rgba(200,240,90,.4);}
+.fi::placeholder,.ft::placeholder{color:var(--muted);}
+.fs{appearance:none;cursor:pointer;}
+.fs option{background:#1a1d24;}
+.ft{resize:vertical;min-height:72px;line-height:1.5;}
+.fa{display:flex;gap:7px;justify-content:flex-end;margin-top:1.1rem;padding-top:.9rem;border-top:1px solid var(--border);}
+.cv-drop{
+  border:1.5px dashed var(--border2);border-radius:var(--r-sm);padding:1rem;
+  text-align:center;cursor:pointer;transition:all .15s;position:relative;
+}
+.cv-drop:hover,.cv-drop.drag{border-color:rgba(200,240,90,.4);background:rgba(200,240,90,.03);}
+.cv-drop input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.cv-label{font-size:12.5px;color:var(--muted);}
+.cv-label strong{color:var(--accent);}
+.cv-ok{font-size:12px;color:var(--accent2);font-family:var(--font-mono);}
+
+/* linked contacts preview */
+.lcp{display:flex;flex-wrap:wrap;gap:5px;min-height:26px;padding:3px 0;}
+
+/* VIEW fields */
+.vf{margin-bottom:.9rem;}
+.vl{font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.vv{font-size:14px;}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vnotes{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:8px 12px;font-size:12.5px;white-space:pre-wrap;line-height:1.6;color:var(--text2);
+}
+
+/* SETUP */
+#setup-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;}
+#setup-screen.open{display:flex;}
+.setup-box{
+  background:var(--surface);border:1px solid var(--border2);border-radius:18px;
+  padding:2rem;max-width:480px;width:100%;margin:1rem;box-shadow:var(--shadow);
+}
+.setup-t{font-family:var(--font-display);font-size:1.5rem;font-weight:500;margin-bottom:.35rem;}
+.setup-sub{font-size:13px;color:var(--muted);margin-bottom:1.5rem;line-height:1.65;}
+.step{display:flex;align-items:flex-start;gap:10px;margin-bottom:1.1rem;}
+.sn{
+  width:21px;height:21px;border-radius:50%;flex-shrink:0;
+  background:var(--accent-dim);color:var(--accent);font-size:9.5px;font-weight:700;
+  font-family:var(--font-mono);display:flex;align-items:center;justify-content:center;margin-top:2px;
+}
+.st{font-size:12.5px;color:var(--muted);line-height:1.55;}
+.st strong{color:var(--text);}
+.setup-ins{display:flex;flex-direction:column;gap:7px;margin-top:.9rem;}
+.setup-div{
+  text-align:center;color:var(--muted);font-size:11px;margin:.9rem 0;position:relative;
+}
+.setup-div::before,.setup-div::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
+.setup-div::before{left:0;}.setup-div::after{right:0;}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:9px;padding:10px 15px;font-size:13px;z-index:600;
+  transform:translateY(10px);opacity:0;transition:all .28s;max-width:320px;box-shadow:var(--shadow);
+}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:rgba(90,240,184,.3);color:var(--accent2);}
+.toast.error{border-color:rgba(240,90,90,.3);color:var(--danger);}
+
+/* RESPONSIVE */
+@media(max-width:920px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:680px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .burger{display:flex;}
+  .main{margin-left:0;}
+  .topbar{padding-left:3.2rem;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .cards-grid,.conn-grid{grid-template-columns:1fr;}
+  .page{padding:1rem;}
+  .fg-grid{grid-template-columns:1fr;}
+  .vgrid{grid-template-columns:1fr;}
+}
+@media(max-width:420px){.stats-grid{grid-template-columns:1fr 1fr;}.sv{font-size:1.45rem;}}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <div class="setup-t">Welcome to <span style="color:var(--accent)">JobTrackr</span></div>
+    <p class="setup-sub">Two free services power this — JSONBin for data, GitHub Gists for CVs. One-time setup.</p>
+    <div class="step"><div class="sn">A</div><div class="st"><strong>JSONBin Secret Key</strong> — <a href="https://jsonbin.io" target="_blank" style="color:var(--accent)">jsonbin.io</a> → Sign Up → API Keys → copy Secret Key</div></div>
+    <div class="step"><div class="sn">B</div><div class="st"><strong>GitHub Token</strong> (for CV files) — <a href="https://github.com/settings/tokens/new?scopes=gist&description=JobTrackr" target="_blank" style="color:var(--accent)">github.com/settings/tokens</a> → New classic token → tick <em>gist</em> only</div></div>
+    <div class="setup-ins">
+      <input type="password" id="api-key-input" class="fi" placeholder="JSONBin Secret Key: $2b$10$..." />
+      <input type="password" id="gh-token-input" class="fi" placeholder="GitHub Token: ghp_... (needed for CV upload)" />
+      <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="saveApiKey()">Connect &amp; Start Tracking →</button>
+    </div>
+    <div class="setup-div">or restore existing</div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <p style="font-size:12px;color:var(--muted)">Already set up? Enter your keys + Bin ID:</p>
+      <input type="text" id="bin-id-input" class="fi" placeholder="JSONBin Bin ID: 6xxxxxxxx..." />
+      <button class="btn" style="width:100%;justify-content:center;" onclick="loadExistingBin()">Load Existing Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- HAMBURGER -->
+<button class="burger" id="burger" onclick="toggleSb()">☰</button>
+<div class="sb-overlay" id="sb-overlay" onclick="closeSb()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><div class="sb-dot"></div>Job<span>Trackr</span></div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">Workspace</div>
+  <div class="nav active" id="nav-apps" onclick="switchPage('applications')">
+    <span class="nav-ic">📋</span>Applications<span class="nav-badge" id="apps-count">0</span>
+  </div>
+  <div class="nav" id="nav-conn" onclick="switchPage('connections')">
+    <span class="nav-ic">🔗</span>Connections<span class="nav-badge" id="conn-count">0</span>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">Quick Add</div>
+  <div class="nav" id="nav-add-app" onclick="openAddModal()" style="display:none">
+    <span class="nav-ic">＋</span>New Application
+  </div>
+  <div class="nav" id="nav-add-conn" onclick="openAddConnModal()" style="display:none">
+    <span class="nav-ic">＋</span>New Connection
+  </div>
+  <div class="sb-bottom">
+    <div class="nav" id="share-nav" onclick="copyShareLink()" style="display:none"><span class="nav-ic">↗</span>Share View</div>
+    <div class="nav" onclick="showSettings()"><span class="nav-ic">⚙</span>Settings</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main" id="main-area" style="display:none">
+  <div class="topbar">
+    <div class="topbar-l"><span class="page-title" id="page-title">Applications</span></div>
+    <div class="topbar-r">
+      <span id="write-badge" class="badge b-owner" style="display:none">OWNER</span>
+      <span id="mode-badge" class="badge b-ro" style="display:none">READ ONLY</span>
+      <button class="btn btn-sm" id="share-btn" onclick="copyShareLink()" style="display:none">↗ Share</button>
+      <button class="btn btn-sm btn-g" onclick="showSettings()">⚙</button>
+      <button class="btn btn-p btn-sm" id="add-btn" onclick="openAddModal()" style="display:none">+ Add</button>
+    </div>
+  </div>
+
+  <!-- APPLICATIONS PAGE -->
+  <div class="page active" id="page-applications">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="toolbar">
+      <div class="sw"><span class="s-ic">🔍</span><input type="text" id="search-input" placeholder="Search company or role…" oninput="renderCards()"></div>
+      <div class="pills" id="filter-pills"></div>
+      <button class="btn btn-sm btn-g" id="add-btn2" onclick="openAddModal()" style="display:none;margin-left:auto">+ New</button>
+    </div>
+    <div id="cards-area"></div>
+  </div>
+
+  <!-- CONNECTIONS PAGE -->
+  <div class="page" id="page-connections">
+    <div class="toolbar">
+      <div class="sw"><span class="s-ic">🔍</span><input type="text" id="conn-search" placeholder="Search name or company…" oninput="renderConnections()"></div>
+      <button class="btn btn-p btn-sm" id="add-conn-btn" onclick="openAddConnModal()" style="display:none;margin-left:auto">+ Add Connection</button>
+    </div>
+    <div id="conn-area"></div>
+  </div>
+</div>
+
+<!-- ADD/EDIT APPLICATION MODAL -->
+<div class="overlay" id="add-modal">
+  <div class="modal">
+    <button class="mc-btn" onclick="closeModal('add-modal')">✕</button>
+    <div class="modal-title" id="modal-title">New Application</div>
+    <div class="fg-grid">
+      <div class="fg"><label class="fl">Company *</label><input type="text" id="f-company" class="fi" placeholder="Google" oninput="updateLinkedPreview()"/></div>
+      <div class="fg"><label class="fl">Role *</label><input type="text" id="f-role" class="fi" placeholder="Product Manager"/></div>
+      <div class="fg"><label class="fl">Date Applied</label><input type="date" id="f-date" class="fi"/></div>
+      <div class="fg"><label class="fl">Status</label>
+        <select id="f-status" class="fs">
+          <option value="pending">Pending Application</option><option value="applied">Applied</option>
+          <option value="interviewing">Interviewing</option><option value="offer">Offer 🎉</option>
+          <option value="rejected">Rejected</option><option value="ghosted">Ghosted</option>
+          <option value="withdrawn">Withdrawn</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Company Website</label><input type="url" id="f-url" class="fi" placeholder="https://google.com"/></div>
+      <div class="fg"><label class="fl">Job Posting URL</label><input type="url" id="f-job-url" class="fi" placeholder="https://linkedin.com/jobs/..."/></div>
+      <div class="fg"><label class="fl">Hiring Manager Name</label><input type="text" id="f-hm-name" class="fi" placeholder="Jane Smith"/></div>
+      <div class="fg"><label class="fl">Hiring Manager LinkedIn</label><input type="url" id="f-hm-li" class="fi" placeholder="https://linkedin.com/in/..."/></div>
+      <div class="fg full">
+        <label class="fl">Matched Connections <span style="color:var(--accent4);opacity:.8">(auto from same company)</span></label>
+        <div class="lcp" id="linked-preview"></div>
+      </div>
+      <div class="fg full">
+        <label class="fl">CV Used (PDF)</label>
+        <div class="cv-drop" id="cv-drop" ondragover="handleDrag(event,true)" ondragleave="handleDrag(event,false)" ondrop="handleDrop(event)">
+          <input type="file" accept=".pdf" id="cv-file" onchange="handleFileSelect(event)"/>
+          <div id="cv-drop-inner"><div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Stored on GitHub Gists — no size limit</div></div>
+        </div>
+      </div>
+      <div class="fg full"><label class="fl">Notes</label><textarea id="f-notes" class="ft" placeholder="Referral, salary, next steps…"></textarea></div>
+    </div>
+    <div class="fa">
+      <button class="btn" onclick="closeModal('add-modal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveApplication()">Save Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT CONNECTION MODAL -->
+<div class="overlay" id="conn-modal">
+  <div class="modal modal-sm">
+    <button class="mc-btn" onclick="closeModal('conn-modal')">✕</button>
+    <div class="modal-title" id="conn-modal-title">New Connection</div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div class="fg"><label class="fl">Full Name *</label><input type="text" id="c-name" class="fi" placeholder="Jane Smith"/></div>
+      <div class="fg"><label class="fl">Company</label><input type="text" id="c-company" class="fi" placeholder="Google"/></div>
+      <div class="fg"><label class="fl">Job Title</label><input type="text" id="c-title" class="fi" placeholder="Engineering Manager"/></div>
+      <div class="fg"><label class="fl">LinkedIn Profile URL *</label><input type="url" id="c-li" class="fi" placeholder="https://linkedin.com/in/..."/></div>
+      <div class="fg"><label class="fl">Notes</label><textarea id="c-notes" class="ft" placeholder="How you met, referral potential…" style="min-height:56px"></textarea></div>
+    </div>
+    <div class="fa">
+      <button class="btn" onclick="closeModal('conn-modal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveConnection()">Save Connection</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="overlay" id="view-modal"><div class="modal" id="view-modal-content"></div></div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const JB='https://api.jsonbin.io/v3',GH='https://api.github.com';
+let S={apiKey:null,binId:null,ghToken:null,apps:[],connections:[],isOwner:false,
+  editingId:null,editingCId:null,cvB64:null,cvName:null,filter:'all',page:'applications'};
+const COLORS=['#c8f05a','#5af0b8','#f0805a','#5a9ef0','#f05ab8','#f0d85a','#a05af0','#5af050','#f0c05a','#5af0d0'];
+const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
+const aColor=n=>COLORS[(n||'?').charCodeAt(0)%COLORS.length];
+const ini=n=>(n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const today=()=>new Date().toISOString().split('T')[0];
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',async()=>{
+  const p=new URLSearchParams(location.search),ub=p.get('bin');
+  const k=localStorage.getItem('jt_key'),b=localStorage.getItem('jt_bin');
+  if(ub&&!k){S.binId=ub;S.isOwner=false;await load();go();}
+  else if(k&&b){S.apiKey=k;S.binId=b;S.ghToken=localStorage.getItem('jt_gh');S.isOwner=true;await load();go();}
+  else if(ub&&k&&b===ub){S.apiKey=k;S.binId=b;S.ghToken=localStorage.getItem('jt_gh');S.isOwner=true;await load();go();}
+  else document.getElementById('setup-screen').classList.add('open');
+  document.getElementById('f-date').value=today();
+});
+
+// ── NAV ───────────────────────────────────────────────────────────
+function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-overlay').classList.toggle('open');}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').classList.remove('open');}
+function switchPage(pg){
+  S.page=pg;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav[id^="nav-"]').forEach(n=>n.classList.remove('active'));
+  document.getElementById(`page-${pg}`).classList.add('active');
+  document.getElementById(pg==='applications'?'nav-apps':'nav-conn').classList.add('active');
+  document.getElementById('page-title').textContent=pg==='applications'?'Applications':'Connections';
+  document.getElementById('add-btn').onclick=pg==='applications'?openAddModal:openAddConnModal;
+  closeSb();
+  if(pg==='connections')renderConnections();
+}
+
+// ── DATA ──────────────────────────────────────────────────────────
+async function load(){
+  try{
+    const h=S.apiKey?{'X-Master-Key':S.apiKey}:{};
+    const r=await fetch(`${JB}/b/${S.binId}/latest`,{headers:h});
+    const d=await r.json();
+    if(!r.ok){toast(d.message||'Load failed','error');return false;}
+    S.apps=d.record.apps||[];S.connections=d.record.connections||[];return true;
+  }catch(e){toast('Load failed','error');return false;}
+}
+async function save(){
+  if(!S.isOwner)return false;
+  try{
+    const lean=S.apps.map(({cvBase64,...rest})=>rest);
+    const r=await fetch(`${JB}/b/${S.binId}`,{
+      method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':S.apiKey},
+      body:JSON.stringify({apps:lean,connections:S.connections})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));toast(e.message||'Save failed','error');return false;}
+    return true;
+  }catch(e){toast('Save failed','error');return false;}
+}
+
+// ── SHOW APP ──────────────────────────────────────────────────────
+function go(){
+  document.getElementById('main-area').style.cssText='display:flex;flex-direction:column;';
+  if(S.isOwner){
+    ['write-badge','share-btn','add-btn','add-btn2','share-nav','nav-add-app','nav-add-conn','add-conn-btn']
+      .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
+  } else {
+    document.getElementById('mode-badge').style.display='inline-flex';
+  }
+  document.getElementById('f-date').value=today();
+  renderAll();
+}
+function renderAll(){renderStats();renderFilterPills();renderCards();updateBadges();}
+function updateBadges(){
+  document.getElementById('apps-count').textContent=S.apps.length;
+  document.getElementById('conn-count').textContent=S.connections.length;
+}
+
+// ── STATS ─────────────────────────────────────────────────────────
+function renderStats(){
+  const a=S.apps,t=a.length;
+  const iv=a.filter(x=>x.status==='interviewing').length;
+  const of=a.filter(x=>x.status==='offer').length;
+  const rj=a.filter(x=>x.status==='rejected').length;
+  const rate=t>0?Math.round((iv+of)/t*100):0;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card" style="--sc:var(--text2)"><div class="sl">Total Applied</div><div class="sv">${t}</div><div class="ss">${S.connections.length} connections saved</div></div>
+    <div class="stat-card" style="--sc:var(--accent4)"><div class="sl">Interviewing</div><div class="sv">${iv}</div><div class="ss">${t>0?Math.round(iv/t*100):0}% of applied</div></div>
+    <div class="stat-card" style="--sc:var(--accent)"><div class="sl">Offers</div><div class="sv">${of}</div><div class="ss">${t>0?Math.round(of/t*100):0}% conversion</div></div>
+    <div class="stat-card" style="--sc:var(--accent3)"><div class="sl">Rejected</div><div class="sv">${rj}</div><div class="ss">${t>0?Math.round(rj/t*100):0}% of applied</div></div>
+    <div class="stat-card" style="--sc:var(--accent2)"><div class="sl">Response Rate</div><div class="sv">${rate}%</div><div class="ss">interviews + offers</div></div>`;
+}
+
+// ── PILLS ─────────────────────────────────────────────────────────
+function renderFilterPills(){
+  const c={all:S.apps.length};S.apps.forEach(a=>{c[a.status]=(c[a.status]||0)+1;});
+  document.getElementById('filter-pills').innerHTML=Object.entries(SLABELS).map(([k,v])=>
+    c[k]?`<button class="pill${S.filter===k?' active':''}" onclick="setFilter('${k}')">${v} <span style="opacity:.55;font-size:9.5px">${c[k]||''}</span></button>`:''
+  ).join('');
+}
+function setFilter(f){S.filter=f;renderFilterPills();renderCards();}
+
+// ── TRACK ─────────────────────────────────────────────────────────
+function track(st){
+  const steps=['applied','interviewing','offer'];
+  const pos=steps.indexOf(st);
+  if(st==='pending') return steps.map(()=>`<div class="ts ghost"></div>`).join('');
+  if(st==='rejected') return steps.map((_,i)=>`<div class="ts ${i===0?'done':'fail'}"></div>`).join('');
+  if(st==='ghosted') return steps.map((_,i)=>`<div class="ts ${i===0?'done':'ghost'}"></div>`).join('');
+  if(st==='withdrawn') return steps.map((_,i)=>`<div class="ts ${i===0?'done':''}"></div>`).join('');
+  return steps.map((_,i)=>`<div class="ts ${i<pos?'done':i===pos?'cur':''}"></div>`).join('');
+}
+
+// ── LINKED CONTACTS ───────────────────────────────────────────────
+function getLinked(co){
+  if(!co)return[];
+  const c=co.trim().toLowerCase();
+  return S.connections.filter(x=>(x.company||'').trim().toLowerCase()===c);
+}
+
+// ── CARDS ─────────────────────────────────────────────────────────
+function renderCards(){
+  const q=(document.getElementById('search-input')?.value||'').toLowerCase();
+  const apps=S.apps.filter(a=>{
+    const mf=S.filter==='all'||a.status===S.filter;
+    const ms=!q||a.company.toLowerCase().includes(q)||a.role.toLowerCase().includes(q);
+    return mf&&ms;
+  }).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+
+  const area=document.getElementById('cards-area');
+  if(!apps.length){
+    area.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-t">${S.apps.length?'No matches':'No applications yet'}</div><p class="empty-s">${S.isOwner&&!S.apps.length?'Hit "+ Add" to log your first application.':'Try a different filter.'}</p>${S.isOwner&&!S.apps.length?`<button class="btn btn-p" onclick="openAddModal()" style="margin-top:4px">+ Add First Application</button>`:''}</div>`;
+    return;
+  }
+  area.innerHTML=`<div class="cards-grid">${apps.map(buildCard).join('')}</div>`;
+}
+
+function buildCard(a){
+  const col=aColor(a.company),in_=ini(a.company);
+  const sc=`s-${a.status}`,lbl=SLABELS[a.status]||a.status;
+  const ds=a.date?new Date(a.date+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'—';
+  const linked=getLinked(a.company);
+  const hasCv=a.cvName||a.cvGistId||a.cvBinId||a.cvBase64;
+
+  const chips=[
+    `<span class="mc">📅 ${ds}</span>`,
+    a.url?`<span class="mc"><a href="${esc(a.url)}" target="_blank" onclick="event.stopPropagation()">🌐 ${esc(a.url.replace(/^https?:\/\//,'').split('/')[0])}</a></span>`:'',
+    a.jobUrl?`<span class="mc"><a href="${esc(a.jobUrl)}" target="_blank" onclick="event.stopPropagation()">💼 Job Post</a></span>`:'',
+    hasCv?`<span class="mc cv-chip" onclick="event.stopPropagation();viewCv('${a.id}')">📄 ${esc((a.cvName||'CV').length>16?(a.cvName||'CV').slice(0,14)+'…':(a.cvName||'CV'))}</span>`:'',
+    (a.hmName||a.hmLinkedIn)?`<span class="mc"><a href="${esc(a.hmLinkedIn||'#')}" target="_blank" onclick="event.stopPropagation()">👤 ${esc(a.hmName||'Manager')}</a></span>`:'',
+  ].filter(Boolean).join('');
+
+  const lcHtml=linked.length?`<div class="linked-contacts">${linked.map(c=>`<span class="cc" onclick="event.stopPropagation();openViewConn('${c.id}')">🔗 ${esc(c.name)}</span>`).join('')}</div>`:'';
+  const notesHtml=a.notes?`<div class="cnotes">${esc(a.notes)}</div>`:'';
+  const actHtml=S.isOwner?`<div class="card-actions"><button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditModal('${a.id}')">✏️ Edit</button><button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteApp('${a.id}')">🗑 Delete</button></div>`:'';
+
+  return `<div class="app-card" onclick="openViewModal('${a.id}')">
+    <div class="ct">
+      <div class="ca" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
+      <div class="ci"><div class="cco">${esc(a.company)}</div><div class="cro">${esc(a.role)}</div></div>
+      <span class="sb ${sc}">${lbl}</span>
+    </div>
+    <div class="track">${track(a.status)}</div>
+    <div class="meta">${chips}</div>
+    ${lcHtml}${notesHtml}${actHtml}
+  </div>`;
+}
+
+// ── CONNECTIONS ───────────────────────────────────────────────────
+function renderConnections(){
+  const q=(document.getElementById('conn-search')?.value||'').toLowerCase();
+  const list=S.connections.filter(c=>!q||(c.name||'').toLowerCase().includes(q)||(c.company||'').toLowerCase().includes(q))
+    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const area=document.getElementById('conn-area');
+  if(!list.length){
+    area.innerHTML=`<div class="empty"><div class="empty-ic">🔗</div><div class="empty-t">No connections yet</div><p class="empty-s">Add LinkedIn contacts here. They auto-link to job apps at the same company.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddConnModal()" style="margin-top:4px">+ Add First Connection</button>`:''}</div>`;
+    return;
+  }
+  area.innerHTML=`<div class="conn-grid">${list.map(buildConn).join('')}</div>`;
+}
+
+function buildConn(c){
+  const col=aColor(c.name),in_=ini(c.name);
+  const linked=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(c.company||'').trim().toLowerCase());
+  const badge=linked.length?`<span class="link-badge">🔗 ${linked.length} app${linked.length>1?'s':''}</span>`:'';
+  const liBtn=c.linkedIn?`<a href="${esc(c.linkedIn)}" target="_blank" onclick="event.stopPropagation()"><div class="li-btn">in</div></a>`:'';
+  const editDel=S.isOwner?`<button class="btn btn-ic btn-g" onclick="event.stopPropagation();openEditConnModal('${c.id}')" style="width:28px;height:28px">✏️</button><button class="btn btn-ic btn-d" onclick="event.stopPropagation();deleteConn('${c.id}')" style="width:28px;height:28px">🗑</button>`:'';
+  return `<div class="conn-card" onclick="openViewConn('${c.id}')">
+    <div class="cav" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
+    <div class="cn-info">
+      <div class="cn-name">${esc(c.name)}</div>
+      ${c.title?`<div class="cn-title">${esc(c.title)}</div>`:''}
+      ${c.company?`<div class="cn-co">@ ${esc(c.company)}</div>`:''}
+      ${badge}
+    </div>
+    <div class="cn-actions">${liBtn}${editDel}</div>
+  </div>`;
+}
+
+// ── MODALS: ADD/EDIT APP ──────────────────────────────────────────
+function openAddModal(){
+  if(!S.isOwner)return;
+  S.editingId=null;S.cvB64=null;S.cvName=null;
+  document.getElementById('modal-title').textContent='New Application';
+  ['f-company','f-role','f-url','f-job-url','f-hm-name','f-hm-li','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-date').value=today();
+  document.getElementById('f-status').value='applied';
+  document.getElementById('cv-drop-inner').innerHTML=`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Stored on GitHub Gists — no size limit</div>`;
+  document.getElementById('linked-preview').innerHTML='';
+  openModal('add-modal');
+}
+function openEditModal(id){
+  if(!S.isOwner)return;
+  const a=S.apps.find(x=>x.id===id);if(!a)return;
+  S.editingId=id;S.cvB64=null;S.cvName=null;
+  document.getElementById('modal-title').textContent='Edit Application';
+  document.getElementById('f-company').value=a.company||'';
+  document.getElementById('f-role').value=a.role||'';
+  document.getElementById('f-date').value=a.date||today();
+  document.getElementById('f-status').value=a.status||'applied';
+  document.getElementById('f-url').value=a.url||'';
+  document.getElementById('f-job-url').value=a.jobUrl||'';
+  document.getElementById('f-hm-name').value=a.hmName||'';
+  document.getElementById('f-hm-li').value=a.hmLinkedIn||'';
+  document.getElementById('f-notes').value=a.notes||'';
+  document.getElementById('cv-drop-inner').innerHTML=(a.cvName||a.cvGistId)
+    ?`<div class="cv-ok">📄 ${esc(a.cvName||'CV on file')} <span style="opacity:.6">(pick new to replace)</span></div>`
+    :`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div>`;
+  updateLinkedPreview();
+  openModal('add-modal');
+}
+function updateLinkedPreview(){
+  const co=document.getElementById('f-company').value.trim();
+  const linked=getLinked(co);
+  const p=document.getElementById('linked-preview');
+  if(!linked.length){p.innerHTML=`<span style="font-size:11.5px;color:var(--muted)">${co?`No connections saved at "${esc(co)}"`:''}</span>`;return;}
+  p.innerHTML=linked.map(c=>`<span class="cc">🔗 ${esc(c.name)}${c.title?` · <span style="opacity:.65">${esc(c.title)}</span>`:''}</span>`).join('');
+}
+async function saveApplication(){
+  const co=document.getElementById('f-company').value.trim(),ro=document.getElementById('f-role').value.trim();
+  if(!co||!ro){toast('Company and Role required','error');return;}
+  const btn=document.querySelector('#add-modal .btn-p');btn.textContent='Saving…';btn.disabled=true;
+  let cvGistId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.cvGistId||null):null;
+  let cvBinId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.cvBinId||null):null;
+  let cvName=S.cvName||(S.editingId?S.apps.find(a=>a.id===S.editingId)?.cvName:null);
+  if(S.cvB64){
+    btn.textContent='Uploading CV…';
+    const gid=await uploadGist(S.cvB64,S.cvName);
+    if(!gid&&S.ghToken){btn.textContent='Save Application';btn.disabled=false;return;}
+    if(gid){cvGistId=gid;cvBinId=null;}
+    cvName=S.cvName;btn.textContent='Saving…';
+  }
+  const app={
+    id:S.editingId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    company:co,role:ro,
+    date:document.getElementById('f-date').value,
+    status:document.getElementById('f-status').value,
+    url:document.getElementById('f-url').value.trim(),
+    jobUrl:document.getElementById('f-job-url').value.trim(),
+    hmName:document.getElementById('f-hm-name').value.trim(),
+    hmLinkedIn:document.getElementById('f-hm-li').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    cvGistId,cvBinId,cvName,updatedAt:new Date().toISOString(),
+  };
+  if(S.editingId){const i=S.apps.findIndex(x=>x.id===S.editingId);if(i>=0)S.apps[i]=app;else S.apps.push(app);}
+  else S.apps.unshift(app);
+  const ok=await save();
+  btn.textContent='Save Application';btn.disabled=false;
+  if(ok){closeModal('add-modal');renderAll();toast(S.editingId?'Updated!':'Application added! 🎉','success');}
+  else if(!S.editingId)S.apps.shift();
+}
+async function deleteApp(id){
+  if(!confirm('Delete this application?'))return;
+  S.apps=S.apps.filter(a=>a.id!==id);
+  if(await save()){renderAll();toast('Deleted','success');}
+}
+
+// ── MODALS: CONNECTIONS ───────────────────────────────────────────
+function openAddConnModal(){
+  if(!S.isOwner)return;
+  S.editingCId=null;
+  document.getElementById('conn-modal-title').textContent='New Connection';
+  ['c-name','c-company','c-title','c-li','c-notes'].forEach(id=>document.getElementById(id).value='');
+  openModal('conn-modal');
+  if(S.page!=='connections')switchPage('connections');
+}
+function openEditConnModal(id){
+  if(!S.isOwner)return;
+  const c=S.connections.find(x=>x.id===id);if(!c)return;
+  S.editingCId=id;
+  document.getElementById('conn-modal-title').textContent='Edit Connection';
+  document.getElementById('c-name').value=c.name||'';
+  document.getElementById('c-company').value=c.company||'';
+  document.getElementById('c-title').value=c.title||'';
+  document.getElementById('c-li').value=c.linkedIn||'';
+  document.getElementById('c-notes').value=c.notes||'';
+  openModal('conn-modal');
+}
+async function saveConnection(){
+  const name=document.getElementById('c-name').value.trim();
+  if(!name){toast('Name required','error');return;}
+  const conn={
+    id:S.editingCId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    name,company:document.getElementById('c-company').value.trim(),
+    title:document.getElementById('c-title').value.trim(),
+    linkedIn:document.getElementById('c-li').value.trim(),
+    notes:document.getElementById('c-notes').value.trim(),
+    addedAt:new Date().toISOString(),
+  };
+  if(S.editingCId){const i=S.connections.findIndex(x=>x.id===S.editingCId);if(i>=0)S.connections[i]=conn;else S.connections.push(conn);}
+  else S.connections.unshift(conn);
+  const ok=await save();
+  if(ok){closeModal('conn-modal');renderConnections();updateBadges();renderCards();toast(S.editingCId?'Connection updated!':'Connection saved! 🔗','success');}
+  else if(!S.editingCId)S.connections.shift();
+}
+async function deleteConn(id){
+  if(!confirm('Delete connection?'))return;
+  S.connections=S.connections.filter(c=>c.id!==id);
+  if(await save()){renderConnections();updateBadges();renderCards();toast('Deleted','success');}
+}
+
+// ── VIEW MODALS ───────────────────────────────────────────────────
+function openViewConn(id){
+  const c=S.connections.find(x=>x.id===id);if(!c)return;
+  const col=aColor(c.name),in_=ini(c.name);
+  const linked=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(c.company||'').trim().toLowerCase());
+  const appsHtml=linked.length?`<div class="vf"><div class="vl">Linked Applications (${linked.length})</div><div style="display:flex;flex-direction:column;gap:5px">${linked.map(a=>`<div style="display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--bg);border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="closeModal('view-modal');openViewModal('${a.id}')"><span class="sb s-${a.status}" style="font-size:9.5px">${SLABELS[a.status]||a.status}</span><span style="font-size:13px;font-weight:500">${esc(a.role)}</span><span style="font-size:10.5px;color:var(--muted);margin-left:auto">${a.date||''}</span></div>`).join('')}</div></div>`:'';
+  const editBtn=S.isOwner?`<button class="btn btn-sm" onclick="closeModal('view-modal');openEditConnModal('${c.id}')">✏️ Edit</button>`:'';
+  document.getElementById('view-modal-content').innerHTML=`
+    <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:1.25rem">
+      <div class="cav" style="width:48px;height:48px;font-size:16px;background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
+      <div style="flex:1"><div style="font-family:var(--font-display);font-size:1.1rem;font-weight:500">${esc(c.name)}</div>${c.title?`<div style="font-size:12.5px;color:var(--text2)">${esc(c.title)}</div>`:''}${c.company?`<div style="font-size:11.5px;color:var(--muted)">@ ${esc(c.company)}</div>`:''}</div>
+      ${c.linkedIn?`<a href="${esc(c.linkedIn)}" target="_blank"><div class="li-btn" style="width:34px;height:34px;font-size:15px">in</div></a>`:''}
+    </div>
+    ${appsHtml}
+    ${c.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(c.notes)}</div></div>`:''}
+    <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end">${editBtn}<button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button></div>`;
+  openModal('view-modal');
+}
+
+function openViewModal(id){
+  const a=S.apps.find(x=>x.id===id);if(!a)return;
+  const col=aColor(a.company),in_=ini(a.company);
+  const ds=a.date?new Date(a.date+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}):'Not set';
+  const linked=getLinked(a.company);
+  const lcHtml=linked.length?`<div class="vf"><div class="vl">Linked Connections</div><div style="display:flex;flex-wrap:wrap;gap:5px">${linked.map(c=>`<span class="cc" onclick="closeModal('view-modal');openViewConn('${c.id}')">🔗 ${esc(c.name)}${c.title?` · ${esc(c.title)}`:''}</span>`).join('')}</div></div>`:'';
+  const cvHtml=(a.cvGistId||a.cvBinId||a.cvBase64)?`<div class="vf"><div class="vl">CV Used</div><button class="btn btn-sm" onclick="viewCv('${a.id}')">📄 Open ${esc(a.cvName||'CV')} ↗</button></div>`:'';
+  const editBtn=S.isOwner?`<button class="btn btn-sm" onclick="closeModal('view-modal');openEditModal('${a.id}')">✏️ Edit</button>`:'';
+  document.getElementById('view-modal-content').innerHTML=`
+    <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
+    <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:1.1rem">
+      <div class="ca" style="width:46px;height:46px;font-size:16px;background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
+      <div style="flex:1;min-width:0"><div style="font-family:var(--font-display);font-size:1.15rem;font-weight:500">${esc(a.company)}</div><div style="font-size:13px;color:var(--text2);margin-top:1px">${esc(a.role)}</div></div>
+      <span class="sb s-${a.status}">${SLABELS[a.status]||a.status}</span>
+    </div>
+    <div style="margin-bottom:1rem"><div class="track">${track(a.status)}</div></div>
+    <div class="vgrid" style="margin-bottom:.9rem">
+      <div class="vf"><div class="vl">Date Applied</div><div class="vv">${ds}</div></div>
+      ${a.url?`<div class="vf"><div class="vl">Company</div><a href="${esc(a.url)}" target="_blank" style="color:var(--accent4);font-size:13.5px">${esc(a.url.replace(/^https?:\/\//,'').split('/')[0])} ↗</a></div>`:''}
+      ${a.jobUrl?`<div class="vf"><div class="vl">Job Posting</div><a href="${esc(a.jobUrl)}" target="_blank" style="color:var(--accent4);font-size:13.5px">View ↗</a></div>`:''}
+      ${a.hmName||a.hmLinkedIn?`<div class="vf"><div class="vl">Hiring Manager</div><div style="display:flex;align-items:center;gap:7px;font-size:13.5px">${a.hmName?`<span>${esc(a.hmName)}</span>`:''}${a.hmLinkedIn?`<a href="${esc(a.hmLinkedIn)}" target="_blank" style="color:var(--accent4);font-size:12px">🔗 LinkedIn</a>`:''}</div></div>`:''}
+    </div>
+    ${lcHtml}${cvHtml}
+    ${a.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(a.notes)}</div></div>`:''}
+    <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end">${editBtn}<button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button></div>`;
+  openModal('view-modal');
+}
+
+// ── CV ────────────────────────────────────────────────────────────
+async function viewCv(id){
+  const a=S.apps.find(x=>x.id===id);if(!a)return;
+  if(a.cvBase64){openPdf(a.cvBase64);return;}
+  if(a.cvGistId){toast('Loading CV…','success');const b=await fetchGist(a.cvGistId);if(!b){toast('Could not load CV','error');return;}openPdf(b);return;}
+  if(a.cvBinId){toast('Loading CV…','success');try{const r=await fetch(`${JB}/b/${a.cvBinId}/latest`,{headers:S.apiKey?{'X-Master-Key':S.apiKey}:{}});const d=await r.json();if(d.record?.cvBase64)openPdf(d.record.cvBase64);}catch(e){toast('Could not load CV','error');}return;}
+  toast('No CV stored','error');
+}
+function openPdf(b64){
+  try{const bin=atob(b64);const b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);window.open(URL.createObjectURL(new Blob([b],{type:'application/pdf'})),'_blank');}
+  catch(e){toast('Could not open PDF','error');}
+}
+async function uploadGist(b64,name){
+  if(!S.ghToken){toast('No GitHub token — add in Settings','error');return null;}
+  try{
+    const r=await fetch(`${GH}/gists`,{method:'POST',headers:{'Authorization':`token ${S.ghToken}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},body:JSON.stringify({description:`JobTrackr CV: ${name}`,public:false,files:{[name+'.b64']:{content:b64}}})});
+    if(!r.ok){const e=await r.json();toast(e.message||'GitHub upload failed','error');return null;}
+    return(await r.json()).id;
+  }catch(e){toast('CV upload failed','error');return null;}
+}
+async function fetchGist(id){
+  try{
+    const h={'Accept':'application/vnd.github+json'};if(S.ghToken)h['Authorization']=`token ${S.ghToken}`;
+    const r=await fetch(`${GH}/gists/${id}`,{headers:h});if(!r.ok)return null;
+    const d=await r.json(),fk=Object.keys(d.files)[0],f=d.files[fk];
+    if(f.truncated){const raw=await fetch(f.raw_url);return await raw.text();}
+    return f.content;
+  }catch(e){return null;}
+}
+function handleFileSelect(e){loadFile(e.target.files[0]);}
+function handleDrop(e){e.preventDefault();handleDrag(e,false);loadFile(e.dataTransfer.files[0]);}
+function handleDrag(e,on){e.preventDefault();document.getElementById('cv-drop').classList.toggle('drag',on);}
+function loadFile(file){
+  if(!file||file.type!=='application/pdf'){toast('Please select a PDF','error');return;}
+  const r=new FileReader();
+  r.onload=e=>{S.cvB64=e.target.result.split(',')[1];S.cvName=file.name;document.getElementById('cv-drop-inner').innerHTML=`<div class="cv-ok">📄 ${esc(file.name)} <span style="opacity:.6">(${(file.size/1024).toFixed(0)}KB)</span></div>`;};
+  r.readAsDataURL(file);
+}
+
+// ── SETUP ─────────────────────────────────────────────────────────
+async function saveApiKey(){
+  const k=document.getElementById('api-key-input').value.trim(),gh=document.getElementById('gh-token-input').value.trim();
+  if(!k){toast('Enter your JSONBin API key','error');return;}
+  S.apiKey=k;S.ghToken=gh||null;S.isOwner=true;
+  try{
+    const r=await fetch(`${JB}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':k,'X-Bin-Name':'JobTrackr','X-Bin-Private':'false'},body:JSON.stringify({apps:[],connections:[]})});
+    const d=await r.json();if(!r.ok){toast(d.message||'Key invalid','error');return;}
+    S.binId=d.metadata.id;
+    localStorage.setItem('jt_key',k);localStorage.setItem('jt_bin',S.binId);if(gh)localStorage.setItem('jt_gh',gh);
+    S.apps=[];S.connections=[];
+    document.getElementById('setup-screen').classList.remove('open');go();toast('Connected! Ready to track 🎉','success');
+  }catch(e){toast('Connection failed','error');}
+}
+async function loadExistingBin(){
+  const k=document.getElementById('api-key-input').value.trim(),bid=document.getElementById('bin-id-input').value.trim(),gh=document.getElementById('gh-token-input').value.trim();
+  if(!k||!bid){toast('Enter key and Bin ID','error');return;}
+  S.apiKey=k;S.binId=bid;S.ghToken=gh||null;S.isOwner=true;
+  const ok=await load();
+  if(ok){localStorage.setItem('jt_key',k);localStorage.setItem('jt_bin',bid);if(gh)localStorage.setItem('jt_gh',gh);document.getElementById('setup-screen').classList.remove('open');go();toast('Data loaded!','success');}
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────
+function showSettings(){
+  const url=`${location.origin}${location.pathname}?bin=${S.binId}`;
+  const ghs=S.ghToken?`<span style="color:var(--accent2)">✓ Connected</span>`:`<span style="color:var(--accent3)">Not set</span>`;
+  document.getElementById('view-modal-content').innerHTML=`
+    <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
+    <div class="modal-title">Settings</div>
+    <div class="vf"><div class="vl">JSONBin Bin ID</div><div style="font-family:var(--font-mono);font-size:11.5px;background:var(--bg);padding:6px 10px;border-radius:6px;border:1px solid var(--border)">${S.binId||'—'}</div></div>
+    <div class="vf"><div class="vl">GitHub Token — ${ghs}</div><input type="password" id="gh-update" class="fi" placeholder="ghp_..." style="margin-bottom:5px"/><button class="btn btn-sm" onclick="updateGh()">Save Token</button></div>
+    <div class="vf"><div class="vl">Read-Only Share URL</div><div style="font-family:var(--font-mono);font-size:10.5px;background:var(--bg);padding:6px 10px;border-radius:6px;border:1px solid var(--border);word-break:break-all;color:var(--accent4)">${url}</div><button class="btn btn-sm" style="margin-top:5px" onclick="copyShareLink();closeModal('view-modal')">Copy Link</button></div>
+    <div class="vf"><div class="vl">Export</div><button class="btn btn-sm" onclick="exportData()">Download JSON backup</button></div>
+    <div class="vf" style="margin-top:.4rem"><div class="vl" style="color:var(--danger)">Danger Zone</div><button class="btn btn-sm btn-d" onclick="clearLocal()">Disconnect</button></div>`;
+  openModal('view-modal');
+}
+function updateGh(){const t=document.getElementById('gh-update').value.trim();if(!t){toast('Enter token','error');return;}S.ghToken=t;localStorage.setItem('jt_gh',t);closeModal('view-modal');toast('GitHub token saved!','success');}
+function copyShareLink(){const url=`${location.origin}${location.pathname}?bin=${S.binId}`;navigator.clipboard.writeText(url).then(()=>toast('Share link copied! 🔗','success'));}
+function exportData(){const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();}
+function clearLocal(){if(!confirm('Disconnect? Cloud data stays safe.'))return;['jt_key','jt_bin','jt_gh'].forEach(k=>localStorage.removeItem(k));location.reload();}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// ── TOAST ─────────────────────────────────────────────────────────
+let _tt;
+function toast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3500);}
+</script>
+</body>
+</html>
