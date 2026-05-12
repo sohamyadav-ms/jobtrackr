@@ -669,11 +669,20 @@ async function createDataGist(token){
 // ── SHOW APP ──────────────────────────────────────────────────────
 function go(){
   document.getElementById('main-area').style.cssText='display:flex;flex-direction:column;';
+  const ownerEls=['write-badge','share-btn','add-btn','add-btn2','share-nav','nav-add-app','nav-add-conn','add-conn-btn'];
   if(S.isOwner){
-    ['write-badge','share-btn','add-btn','add-btn2','share-nav','nav-add-app','nav-add-conn','add-conn-btn']
-      .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
+    ownerEls.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
   } else {
+    // explicitly hide every owner element
+    ownerEls.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
     document.getElementById('mode-badge').style.display='inline-flex';
+    // hide settings btn for read-only (nothing useful there)
+    const sb=document.querySelector('.topbar-r .btn-g');if(sb)sb.style.display='none';
+    // inject read-only banner
+    const banner=document.createElement('div');
+    banner.style.cssText='background:rgba(240,128,90,0.1);border-bottom:1px solid rgba(240,128,90,0.2);padding:7px 1.5rem;font-size:12.5px;color:#f7b89a;text-align:center;';
+    banner.textContent='👁 You are viewing this dashboard in read-only mode. Contact the owner to make changes.';
+    document.getElementById('main-area').insertBefore(banner,document.getElementById('main-area').firstChild.nextSibling);
   }
   document.getElementById('f-date').value=today();
   renderAll();
@@ -948,6 +957,7 @@ async function saveApplication(){
   }
 }
 async function deleteApp(id){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
   if(!confirm('Delete this application?'))return;
   S.apps=S.apps.filter(a=>a.id!==id);
   if(await save()){renderAll();toast('Deleted','success');}
@@ -978,6 +988,7 @@ function openEditConnModal(id){
   openModal('conn-modal');
 }
 async function saveConnection(){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
   const name=document.getElementById('c-name').value.trim();
   if(!name){toast('Name required','error');return;}
   const conn={
@@ -998,6 +1009,7 @@ async function saveConnection(){
   else if(!S.editingCId)S.connections.shift();
 }
 async function deleteConn(id){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
   if(!confirm('Delete connection?'))return;
   S.connections=S.connections.filter(c=>c.id!==id);
   if(await save()){renderConnections();updateBadges();renderCards();toast('Deleted','success');}
