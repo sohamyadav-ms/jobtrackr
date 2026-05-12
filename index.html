@@ -398,19 +398,19 @@ a{color:inherit;text-decoration:none;}
 <div id="setup-screen">
   <div class="setup-box">
     <div class="setup-t">Welcome to <span style="color:var(--accent)">JobTrackr</span></div>
-    <p class="setup-sub">Two free services power this — JSONBin for data, GitHub Gists for CVs. One-time setup.</p>
-    <div class="step"><div class="sn">A</div><div class="st"><strong>JSONBin Secret Key</strong> — <a href="https://jsonbin.io" target="_blank" style="color:var(--accent)">jsonbin.io</a> → Sign Up → API Keys → copy Secret Key</div></div>
-    <div class="step"><div class="sn">B</div><div class="st"><strong>GitHub Token</strong> (for CV files) — <a href="https://github.com/settings/tokens/new?scopes=gist&description=JobTrackr" target="_blank" style="color:var(--accent)">github.com/settings/tokens</a> → New classic token → tick <em>gist</em> only</div></div>
+    <p class="setup-sub">100% free, forever — powered entirely by GitHub Gists. No limits, no billing, no expiry.</p>
+    <div class="step"><div class="sn">1</div><div class="st"><strong>Create a GitHub Token</strong> — <a href="https://github.com/settings/tokens/new?scopes=gist&description=JobTrackr" target="_blank" style="color:var(--accent)">github.com/settings/tokens</a> → New classic token → tick <em>gist</em> scope only → Generate &amp; copy</div></div>
+    <div class="step"><div class="sn">2</div><div class="st"><strong>Paste it below</strong> — stored only in your browser, never shared anywhere</div></div>
     <div class="setup-ins">
-      <input type="password" id="api-key-input" class="fi" placeholder="JSONBin Secret Key: $2b$10$..." />
-      <input type="password" id="gh-token-input" class="fi" placeholder="GitHub Token: ghp_... (needed for CV upload)" />
+      <input type="password" id="gh-token-input" class="fi" placeholder="GitHub Token: ghp_..." />
       <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="saveApiKey()">Connect &amp; Start Tracking →</button>
     </div>
-    <div class="setup-div">or restore existing</div>
+    <div class="setup-div">or restore on a new device</div>
     <div style="display:flex;flex-direction:column;gap:7px;">
-      <p style="font-size:12px;color:var(--muted)">Already set up? Enter your keys + Bin ID:</p>
-      <input type="text" id="bin-id-input" class="fi" placeholder="JSONBin Bin ID: 6xxxxxxxx..." />
-      <button class="btn" style="width:100%;justify-content:center;" onclick="loadExistingBin()">Load Existing Data</button>
+      <p style="font-size:12px;color:var(--muted)">Already set up? Paste your GitHub token + Data Gist ID:</p>
+      <input type="password" id="restore-token-input" class="fi" placeholder="GitHub Token: ghp_..." />
+      <input type="text" id="bin-id-input" class="fi" placeholder="Data Gist ID (from Settings on your other device)" />
+      <button class="btn" style="width:100%;justify-content:center;" onclick="loadExistingBin()">Restore Existing Data</button>
     </div>
   </div>
 </div>
@@ -555,8 +555,8 @@ a{color:inherit;text-decoration:none;}
 <div class="toast" id="toast"></div>
 
 <script>
-const JB='https://api.jsonbin.io/v3',GH='https://api.github.com';
-let S={apiKey:null,binId:null,ghToken:null,apps:[],connections:[],isOwner:false,
+const GH='https://api.github.com';
+let S={ghToken:null,dataGistId:null,apps:[],connections:[],isOwner:false,
   editingId:null,editingCId:null,cvB64:null,cvName:null,filter:'all',page:'applications'};
 const COLORS=['#c8f05a','#5af0b8','#f0805a','#5a9ef0','#f05ab8','#f0d85a','#a05af0','#5af050','#f0c05a','#5af0d0'];
 const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
@@ -567,12 +567,19 @@ const today=()=>new Date().toISOString().split('T')[0];
 
 // ── INIT ──────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
-  const p=new URLSearchParams(location.search),ub=p.get('bin');
-  const k=localStorage.getItem('jt_key'),b=localStorage.getItem('jt_bin');
-  if(ub&&!k){S.binId=ub;S.isOwner=false;await load();go();}
-  else if(k&&b){S.apiKey=k;S.binId=b;S.ghToken=localStorage.getItem('jt_gh');S.isOwner=true;await load();go();}
-  else if(ub&&k&&b===ub){S.apiKey=k;S.binId=b;S.ghToken=localStorage.getItem('jt_gh');S.isOwner=true;await load();go();}
-  else document.getElementById('setup-screen').classList.add('open');
+  const p=new URLSearchParams(location.search),ug=p.get('gist');
+  const k=localStorage.getItem('jt_gh'),g=localStorage.getItem('jt_gist');
+  if(ug&&!k){
+    // read-only share link
+    S.dataGistId=ug;S.isOwner=false;await load();go();
+  } else if(k&&g){
+    S.ghToken=k;S.dataGistId=g;S.isOwner=true;await load();go();
+  } else if(ug&&k){
+    S.ghToken=k;S.dataGistId=ug;S.isOwner=true;
+    localStorage.setItem('jt_gist',ug);await load();go();
+  } else {
+    document.getElementById('setup-screen').classList.add('open');
+  }
   document.getElementById('f-date').value=today();
 });
 
@@ -591,27 +598,69 @@ function switchPage(pg){
   if(pg==='connections')renderConnections();
 }
 
-// ── DATA ──────────────────────────────────────────────────────────
+// ── DATA (GitHub Gist) ────────────────────────────────────────────
+async function fetchT(url,opts={},ms=15000){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),ms);
+  try{return await fetch(url,{...opts,signal:ctrl.signal});}
+  finally{clearTimeout(t);}
+}
+
+// Read data from the data Gist
 async function load(){
   try{
-    const h=S.apiKey?{'X-Master-Key':S.apiKey}:{};
-    const r=await fetch(`${JB}/b/${S.binId}/latest`,{headers:h});
+    const h={'Accept':'application/vnd.github+json'};
+    if(S.ghToken)h['Authorization']=`token ${S.ghToken}`;
+    const r=await fetchT(`${GH}/gists/${S.dataGistId}`,{headers:h});
+    if(!r.ok){const e=await r.json().catch(()=>({}));toast(e.message||'Load failed','error');return false;}
     const d=await r.json();
-    if(!r.ok){toast(d.message||'Load failed','error');return false;}
-    S.apps=d.record.apps||[];S.connections=d.record.connections||[];return true;
-  }catch(e){toast('Load failed','error');return false;}
+    const fk=Object.keys(d.files)[0];
+    const f=d.files[fk];
+    let content;
+    if(f.truncated){const raw=await fetchT(f.raw_url);content=await raw.text();}
+    else content=f.content;
+    const rec=JSON.parse(content);
+    S.apps=rec.apps||[];S.connections=rec.connections||[];
+    return true;
+  }catch(e){
+    toast(e.name==='AbortError'?'Request timed out':'Load failed: '+e.message,'error');
+    return false;
+  }
 }
+
+// Write data to the data Gist
 async function save(){
-  if(!S.isOwner)return false;
+  if(!S.isOwner||!S.ghToken||!S.dataGistId)return false;
   try{
     const lean=S.apps.map(({cvBase64,...rest})=>rest);
-    const r=await fetch(`${JB}/b/${S.binId}`,{
-      method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':S.apiKey},
-      body:JSON.stringify({apps:lean,connections:S.connections})
+    const payload=JSON.stringify({apps:lean,connections:S.connections},null,2);
+    const r=await fetchT(`${GH}/gists/${S.dataGistId}`,{
+      method:'PATCH',
+      headers:{'Authorization':`token ${S.ghToken}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+      body:JSON.stringify({files:{'jobtrackr-data.json':{content:payload}}})
     });
     if(!r.ok){const e=await r.json().catch(()=>({}));toast(e.message||'Save failed','error');return false;}
     return true;
-  }catch(e){toast('Save failed','error');return false;}
+  }catch(e){
+    toast(e.name==='AbortError'?'Save timed out — try again':'Save failed: '+e.message,'error');
+    return false;
+  }
+}
+
+// Create a brand new data Gist on first setup
+async function createDataGist(token){
+  const r=await fetchT(`${GH}/gists`,{
+    method:'POST',
+    headers:{'Authorization':`token ${token}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+    body:JSON.stringify({
+      description:'JobTrackr — Job Application Data',
+      public:false,
+      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[]},null,2)}}
+    })
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Failed to create Gist');}
+  const d=await r.json();
+  return d.id;
 }
 
 // ── SHOW APP ──────────────────────────────────────────────────────
@@ -865,8 +914,6 @@ async function saveApplication(){
     status:document.getElementById('f-status').value,
     url:document.getElementById('f-url').value.trim(),
     jobUrl:document.getElementById('f-job-url').value.trim(),
-    hmName:document.getElementById('f-hm-name').value.trim(),
-    hmLinkedIn:document.getElementById('f-hm-li').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
     contacts:getContactRows(),
     cvGistId,cvBinId,cvName,updatedAt:new Date().toISOString(),
@@ -1004,7 +1051,7 @@ async function viewCv(id){
   const a=S.apps.find(x=>x.id===id);if(!a)return;
   if(a.cvBase64){openPdf(a.cvBase64);return;}
   if(a.cvGistId){toast('Loading CV…','success');const b=await fetchGist(a.cvGistId);if(!b){toast('Could not load CV','error');return;}openPdf(b);return;}
-  if(a.cvBinId){toast('Loading CV…','success');try{const r=await fetch(`${JB}/b/${a.cvBinId}/latest`,{headers:S.apiKey?{'X-Master-Key':S.apiKey}:{}});const d=await r.json();if(d.record?.cvBase64)openPdf(d.record.cvBase64);}catch(e){toast('Could not load CV','error');}return;}
+  if(a.cvBinId){toast('CV was stored on JSONBin (old format) — please re-upload it by editing this application','error');return;}
   toast('No CV stored','error');
 }
 function openPdf(b64){
@@ -1040,44 +1087,84 @@ function loadFile(file){
 
 // ── SETUP ─────────────────────────────────────────────────────────
 async function saveApiKey(){
-  const k=document.getElementById('api-key-input').value.trim(),gh=document.getElementById('gh-token-input').value.trim();
-  if(!k){toast('Enter your JSONBin API key','error');return;}
-  S.apiKey=k;S.ghToken=gh||null;S.isOwner=true;
+  const gh=document.getElementById('gh-token-input').value.trim();
+  if(!gh){toast('Enter your GitHub token','error');return;}
+  const btn=document.querySelector('#setup-screen .btn-p');
+  btn.textContent='Creating Gist…';btn.disabled=true;
   try{
-    const r=await fetch(`${JB}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':k,'X-Bin-Name':'JobTrackr','X-Bin-Private':'false'},body:JSON.stringify({apps:[],connections:[]})});
-    const d=await r.json();if(!r.ok){toast(d.message||'Key invalid','error');return;}
-    S.binId=d.metadata.id;
-    localStorage.setItem('jt_key',k);localStorage.setItem('jt_bin',S.binId);if(gh)localStorage.setItem('jt_gh',gh);
+    const gistId=await createDataGist(gh);
+    S.ghToken=gh;S.dataGistId=gistId;S.isOwner=true;
     S.apps=[];S.connections=[];
-    document.getElementById('setup-screen').classList.remove('open');go();toast('Connected! Ready to track 🎉','success');
-  }catch(e){toast('Connection failed','error');}
+    localStorage.setItem('jt_gh',gh);
+    localStorage.setItem('jt_gist',gistId);
+    document.getElementById('setup-screen').classList.remove('open');
+    go();toast('Connected! 100% free, powered by GitHub 🎉','success');
+  }catch(e){
+    toast(e.message||'Setup failed — check your token','error');
+  }finally{btn.textContent='Connect & Start Tracking →';btn.disabled=false;}
 }
+
 async function loadExistingBin(){
-  const k=document.getElementById('api-key-input').value.trim(),bid=document.getElementById('bin-id-input').value.trim(),gh=document.getElementById('gh-token-input').value.trim();
-  if(!k||!bid){toast('Enter key and Bin ID','error');return;}
-  S.apiKey=k;S.binId=bid;S.ghToken=gh||null;S.isOwner=true;
+  const gh=(document.getElementById('restore-token-input')?.value||'').trim();
+  const gid=document.getElementById('bin-id-input').value.trim();
+  if(!gh||!gid){toast('Enter your GitHub token and Gist ID','error');return;}
+  S.ghToken=gh;S.dataGistId=gid;S.isOwner=true;
   const ok=await load();
-  if(ok){localStorage.setItem('jt_key',k);localStorage.setItem('jt_bin',bid);if(gh)localStorage.setItem('jt_gh',gh);document.getElementById('setup-screen').classList.remove('open');go();toast('Data loaded!','success');}
+  if(ok){
+    localStorage.setItem('jt_gh',gh);
+    localStorage.setItem('jt_gist',gid);
+    document.getElementById('setup-screen').classList.remove('open');
+    go();toast('Data restored!','success');
+  }
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────────
 function showSettings(){
-  const url=`${location.origin}${location.pathname}?bin=${S.binId}`;
-  const ghs=S.ghToken?`<span style="color:var(--accent2)">✓ Connected</span>`:`<span style="color:var(--accent3)">Not set</span>`;
+  const shareUrl=`${location.origin}${location.pathname}?gist=${S.dataGistId}`;
   document.getElementById('view-modal-content').innerHTML=`
     <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
     <div class="modal-title">Settings</div>
-    <div class="vf"><div class="vl">JSONBin Bin ID</div><div style="font-family:var(--font-mono);font-size:11.5px;background:var(--bg);padding:6px 10px;border-radius:6px;border:1px solid var(--border)">${S.binId||'—'}</div></div>
-    <div class="vf"><div class="vl">GitHub Token — ${ghs}</div><input type="password" id="gh-update" class="fi" placeholder="ghp_..." style="margin-bottom:5px"/><button class="btn btn-sm" onclick="updateGh()">Save Token</button></div>
-    <div class="vf"><div class="vl">Read-Only Share URL</div><div style="font-family:var(--font-mono);font-size:10.5px;background:var(--bg);padding:6px 10px;border-radius:6px;border:1px solid var(--border);word-break:break-all;color:var(--accent4)">${url}</div><button class="btn btn-sm" style="margin-top:5px" onclick="copyShareLink();closeModal('view-modal')">Copy Link</button></div>
-    <div class="vf"><div class="vl">Export</div><button class="btn btn-sm" onclick="exportData()">Download JSON backup</button></div>
-    <div class="vf" style="margin-top:.4rem"><div class="vl" style="color:var(--danger)">Danger Zone</div><button class="btn btn-sm btn-d" onclick="clearLocal()">Disconnect</button></div>`;
+    <div class="vf">
+      <div class="vl">Data Gist ID <span style="color:var(--muted);font-weight:400">(copy this to restore on another device)</span></div>
+      <div style="font-family:var(--font-mono);font-size:11.5px;background:var(--bg);padding:6px 10px;border-radius:6px;border:1px solid var(--border);word-break:break-all">${S.dataGistId||'—'}</div>
+    </div>
+    <div class="vf">
+      <div class="vl">GitHub Token</div>
+      <input type="password" id="gh-update" class="fi" placeholder="ghp_... (update token)" style="margin-bottom:5px"/>
+      <button class="btn btn-sm" onclick="updateGh()">Update Token</button>
+    </div>
+    <div class="vf">
+      <div class="vl">Read-Only Share URL</div>
+      <div style="font-family:var(--font-mono);font-size:10.5px;background:var(--bg);padding:6px 10px;border-radius:6px;border:1px solid var(--border);word-break:break-all;color:var(--accent4)">${shareUrl}</div>
+      <button class="btn btn-sm" style="margin-top:5px" onclick="copyShareLink();closeModal('view-modal')">Copy Share Link</button>
+    </div>
+    <div class="vf">
+      <div class="vl">View your Gists</div>
+      <a href="https://gist.github.com" target="_blank"><button class="btn btn-sm">Open gist.github.com ↗</button></a>
+    </div>
+    <div class="vf"><div class="vl">Export Local Backup</div><button class="btn btn-sm" onclick="exportData()">Download JSON</button></div>
+    <div class="vf" style="margin-top:.4rem"><div class="vl" style="color:var(--danger)">Danger Zone</div><button class="btn btn-sm btn-d" onclick="clearLocal()">Disconnect this device</button></div>`;
   openModal('view-modal');
 }
-function updateGh(){const t=document.getElementById('gh-update').value.trim();if(!t){toast('Enter token','error');return;}S.ghToken=t;localStorage.setItem('jt_gh',t);closeModal('view-modal');toast('GitHub token saved!','success');}
-function copyShareLink(){const url=`${location.origin}${location.pathname}?bin=${S.binId}`;navigator.clipboard.writeText(url).then(()=>toast('Share link copied! 🔗','success'));}
-function exportData(){const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();}
-function clearLocal(){if(!confirm('Disconnect? Cloud data stays safe.'))return;['jt_key','jt_bin','jt_gh'].forEach(k=>localStorage.removeItem(k));location.reload();}
+function updateGh(){
+  const t=document.getElementById('gh-update').value.trim();
+  if(!t){toast('Enter a token','error');return;}
+  S.ghToken=t;localStorage.setItem('jt_gh',t);
+  closeModal('view-modal');toast('GitHub token updated!','success');
+}
+function copyShareLink(){
+  const url=`${location.origin}${location.pathname}?gist=${S.dataGistId}`;
+  navigator.clipboard.writeText(url).then(()=>toast('Share link copied! 🔗','success'));
+}
+function exportData(){
+  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();
+}
+function clearLocal(){
+  if(!confirm('Disconnect this device? Your Gist data stays safe on GitHub.'))return;
+  ['jt_gh','jt_gist','jt_key','jt_bin'].forEach(k=>localStorage.removeItem(k));
+  location.reload();
+}
 
 // ── MODAL HELPERS ─────────────────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add('open');}
