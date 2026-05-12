@@ -570,14 +570,17 @@ window.addEventListener('DOMContentLoaded',async()=>{
   const p=new URLSearchParams(location.search),ug=p.get('gist');
   const k=localStorage.getItem('jt_gh'),g=localStorage.getItem('jt_gist');
   if(ug&&!k){
-    // read-only share link
+    // read-only share link — no token needed
     S.dataGistId=ug;S.isOwner=false;await load();go();
   } else if(k&&g){
+    // fully set up
     S.ghToken=k;S.dataGistId=g;S.isOwner=true;await load();go();
   } else if(ug&&k){
+    // has token + gist in URL — save gist and go
     S.ghToken=k;S.dataGistId=ug;S.isOwner=true;
     localStorage.setItem('jt_gist',ug);await load();go();
   } else {
+    // missing gist ID or token — always show setup
     document.getElementById('setup-screen').classList.add('open');
   }
   document.getElementById('f-date').value=today();
@@ -896,34 +899,53 @@ function updateLinkedPreview(){
 async function saveApplication(){
   const co=document.getElementById('f-company').value.trim(),ro=document.getElementById('f-role').value.trim();
   if(!co||!ro){toast('Company and Role required','error');return;}
-  const btn=document.querySelector('#add-modal .btn-p');btn.textContent='Saving…';btn.disabled=true;
-  let cvGistId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.cvGistId||null):null;
-  let cvBinId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.cvBinId||null):null;
-  let cvName=S.cvName||(S.editingId?S.apps.find(a=>a.id===S.editingId)?.cvName:null);
-  if(S.cvB64){
-    btn.textContent='Uploading CV…';
-    const gid=await uploadGist(S.cvB64,S.cvName);
-    if(!gid&&S.ghToken){btn.textContent='Save Application';btn.disabled=false;return;}
-    if(gid){cvGistId=gid;cvBinId=null;}
-    cvName=S.cvName;btn.textContent='Saving…';
+
+  // Guard: must have a data Gist set up
+  if(!S.dataGistId||!S.ghToken){
+    toast('Not connected — please disconnect and reconnect via Settings','error');
+    return;
   }
-  const app={
-    id:S.editingId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
-    company:co,role:ro,
-    date:document.getElementById('f-date').value,
-    status:document.getElementById('f-status').value,
-    url:document.getElementById('f-url').value.trim(),
-    jobUrl:document.getElementById('f-job-url').value.trim(),
-    notes:document.getElementById('f-notes').value.trim(),
-    contacts:getContactRows(),
-    cvGistId,cvBinId,cvName,updatedAt:new Date().toISOString(),
-  };
-  if(S.editingId){const i=S.apps.findIndex(x=>x.id===S.editingId);if(i>=0)S.apps[i]=app;else S.apps.push(app);}
-  else S.apps.unshift(app);
-  const ok=await save();
-  btn.textContent='Save Application';btn.disabled=false;
-  if(ok){closeModal('add-modal');renderAll();toast(S.editingId?'Updated!':'Application added! 🎉','success');}
-  else if(!S.editingId)S.apps.shift();
+
+  const btn=document.querySelector('#add-modal .btn-p');
+  btn.textContent='Saving…';btn.disabled=true;
+
+  try{
+    let cvGistId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.cvGistId||null):null;
+    let cvBinId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.cvBinId||null):null;
+    let cvName=S.cvName||(S.editingId?S.apps.find(a=>a.id===S.editingId)?.cvName:null);
+    if(S.cvB64){
+      btn.textContent='Uploading CV…';
+      const gid=await uploadGist(S.cvB64,S.cvName);
+      if(!gid){btn.textContent='Save Application';btn.disabled=false;return;}
+      cvGistId=gid;cvBinId=null;cvName=S.cvName;
+      btn.textContent='Saving…';
+    }
+    const app={
+      id:S.editingId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+      company:co,role:ro,
+      date:document.getElementById('f-date').value,
+      status:document.getElementById('f-status').value,
+      url:document.getElementById('f-url').value.trim(),
+      jobUrl:document.getElementById('f-job-url').value.trim(),
+      notes:document.getElementById('f-notes').value.trim(),
+      contacts:getContactRows(),
+      cvGistId,cvBinId,cvName,updatedAt:new Date().toISOString(),
+    };
+    const prev=[...S.apps];
+    if(S.editingId){const i=S.apps.findIndex(x=>x.id===S.editingId);if(i>=0)S.apps[i]=app;else S.apps.push(app);}
+    else S.apps.unshift(app);
+    const ok=await save();
+    if(ok){
+      closeModal('add-modal');renderAll();
+      toast(S.editingId?'Updated! ✓':'Application added! 🎉','success');
+    } else {
+      S.apps=prev; // revert
+    }
+  }catch(e){
+    toast('Unexpected error: '+e.message,'error');
+  }finally{
+    btn.textContent='Save Application';btn.disabled=false;
+  }
 }
 async function deleteApp(id){
   if(!confirm('Delete this application?'))return;
