@@ -569,18 +569,20 @@ const today=()=>new Date().toISOString().split('T')[0];
 window.addEventListener('DOMContentLoaded',async()=>{
   const p=new URLSearchParams(location.search),ug=p.get('gist');
   const k=localStorage.getItem('jt_gh'),g=localStorage.getItem('jt_gist');
-  if(ug&&!k){
-    // read-only share link — no token needed
-    S.dataGistId=ug;S.isOwner=false;await load();go();
+
+  if(ug && ug !== g){
+    // URL has a gist ID that is NOT the owner's own gist → always read-only
+    S.dataGistId=ug;S.isOwner=false;S.ghToken=null;
+    await load();go();
   } else if(k&&g){
-    // fully set up
+    // fully set up owner on this device
     S.ghToken=k;S.dataGistId=g;S.isOwner=true;await load();go();
-  } else if(ug&&k){
-    // has token + gist in URL — save gist and go
+  } else if(ug&&k&&g===ug){
+    // owner visiting via their own share link
     S.ghToken=k;S.dataGistId=ug;S.isOwner=true;
     localStorage.setItem('jt_gist',ug);await load();go();
   } else {
-    // missing gist ID or token — always show setup
+    // no credentials at all → setup
     document.getElementById('setup-screen').classList.add('open');
   }
   document.getElementById('f-date').value=today();
