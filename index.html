@@ -328,6 +328,43 @@ a{color:inherit;text-decoration:none;}
 .setup-div::before,.setup-div::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
 .setup-div::before{left:0;}.setup-div::after{right:0;}
 
+/* CONTACT ROWS */
+.contact-rows{display:flex;flex-direction:column;gap:8px;}
+.contact-row{
+  background:var(--bg);border:1px solid var(--border2);border-radius:var(--r-sm);
+  padding:10px 11px;display:flex;flex-direction:column;gap:7px;position:relative;
+}
+.contact-row-top{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.contact-row-bottom{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.contact-type-select{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:5px;
+  padding:4px 8px;font-family:var(--font-body);font-size:11px;font-weight:600;
+  color:var(--accent4);outline:none;cursor:pointer;letter-spacing:.03em;
+}
+.contact-type-select option{background:#1a1d24;}
+.remove-contact{
+  position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:5px;
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.remove-contact:hover{background:rgba(240,90,90,.15);border-color:rgba(240,90,90,.3);color:var(--danger);}
+.add-contact-btn{
+  display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:var(--r-sm);
+  border:1px dashed var(--border2);background:transparent;color:var(--muted);
+  font-size:12px;font-family:var(--font-body);cursor:pointer;transition:all .15s;width:100%;
+  justify-content:center;
+}
+.add-contact-btn:hover{border-color:rgba(200,240,90,.35);color:var(--accent);background:var(--accent-dim);}
+
+/* connection card type badge */
+.conn-type{
+  font-size:9px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border-radius:4px;
+  text-transform:uppercase;flex-shrink:0;
+}
+.conn-type-hm{background:rgba(240,128,90,.15);color:#f7b89a;border:1px solid rgba(240,128,90,.25);}
+.conn-type-li{background:rgba(90,158,240,.15);color:#8ac4f7;border:1px solid rgba(90,158,240,.25);}
+
 /* TOAST */
 .toast{
   position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);
@@ -460,8 +497,11 @@ a{color:inherit;text-decoration:none;}
       </div>
       <div class="fg"><label class="fl">Company Website</label><input type="url" id="f-url" class="fi" placeholder="https://google.com"/></div>
       <div class="fg"><label class="fl">Job Posting URL</label><input type="url" id="f-job-url" class="fi" placeholder="https://linkedin.com/jobs/..."/></div>
-      <div class="fg"><label class="fl">Hiring Manager Name</label><input type="text" id="f-hm-name" class="fi" placeholder="Jane Smith"/></div>
-      <div class="fg"><label class="fl">Hiring Manager LinkedIn</label><input type="url" id="f-hm-li" class="fi" placeholder="https://linkedin.com/in/..."/></div>
+      <div class="fg full">
+        <label class="fl">Contacts <span style="color:var(--accent4);opacity:.8">(Hiring Manager / LinkedIn Connection)</span></label>
+        <div class="contact-rows" id="contact-rows"></div>
+        <button type="button" class="add-contact-btn" onclick="addContactRow()">＋ Add Contact</button>
+      </div>
       <div class="fg full">
         <label class="fl">Matched Connections <span style="color:var(--accent4);opacity:.8">(auto from same company)</span></label>
         <div class="lcp" id="linked-preview"></div>
@@ -489,9 +529,16 @@ a{color:inherit;text-decoration:none;}
     <div class="modal-title" id="conn-modal-title">New Connection</div>
     <div style="display:flex;flex-direction:column;gap:9px;">
       <div class="fg"><label class="fl">Full Name *</label><input type="text" id="c-name" class="fi" placeholder="Jane Smith"/></div>
+      <div class="fg"><label class="fl">Type</label>
+        <select id="c-type" class="fs">
+          <option value="linkedin">LinkedIn Connection</option>
+          <option value="hiring_manager">Hiring Manager</option>
+        </select>
+      </div>
       <div class="fg"><label class="fl">Company</label><input type="text" id="c-company" class="fi" placeholder="Google"/></div>
       <div class="fg"><label class="fl">Job Title</label><input type="text" id="c-title" class="fi" placeholder="Engineering Manager"/></div>
-      <div class="fg"><label class="fl">LinkedIn Profile URL *</label><input type="url" id="c-li" class="fi" placeholder="https://linkedin.com/in/..."/></div>
+      <div class="fg"><label class="fl">LinkedIn Profile URL</label><input type="url" id="c-li" class="fi" placeholder="https://linkedin.com/in/..."/></div>
+      <div class="fg"><label class="fl">Contact Details <span style="opacity:.6">(email or phone)</span></label><input type="text" id="c-contact" class="fi" placeholder="jane@google.com or +353 87 ..."/></div>
       <div class="fg"><label class="fl">Notes</label><textarea id="c-notes" class="ft" placeholder="How you met, referral potential…" style="min-height:56px"></textarea></div>
     </div>
     <div class="fa">
@@ -656,7 +703,11 @@ function buildCard(a){
     a.url?`<span class="mc"><a href="${esc(a.url)}" target="_blank" onclick="event.stopPropagation()">🌐 ${esc(a.url.replace(/^https?:\/\//,'').split('/')[0])}</a></span>`:'',
     a.jobUrl?`<span class="mc"><a href="${esc(a.jobUrl)}" target="_blank" onclick="event.stopPropagation()">💼 Job Post</a></span>`:'',
     hasCv?`<span class="mc cv-chip" onclick="event.stopPropagation();viewCv('${a.id}')">📄 ${esc((a.cvName||'CV').length>16?(a.cvName||'CV').slice(0,14)+'…':(a.cvName||'CV'))}</span>`:'',
-    (a.hmName||a.hmLinkedIn)?`<span class="mc"><a href="${esc(a.hmLinkedIn||'#')}" target="_blank" onclick="event.stopPropagation()">👤 ${esc(a.hmName||'Manager')}</a></span>`:'',
+    ...(a.contacts||[]).map(c=>c.linkedIn
+      ?`<span class="mc"><a href="${esc(c.linkedIn)}" target="_blank" onclick="event.stopPropagation()">👤 ${esc(c.name)}</a></span>`
+      :`<span class="mc">👤 ${esc(c.name)}</span>`),
+    // legacy
+    (!a.contacts?.length&&(a.hmName||a.hmLinkedIn))?`<span class="mc"><a href="${esc(a.hmLinkedIn||'#')}" target="_blank" onclick="event.stopPropagation()">👤 ${esc(a.hmName||'Manager')}</a></span>`:'',
   ].filter(Boolean).join('');
 
   const lcHtml=linked.length?`<div class="linked-contacts">${linked.map(c=>`<span class="cc" onclick="event.stopPropagation();openViewConn('${c.id}')">🔗 ${esc(c.name)}</span>`).join('')}</div>`:'';
@@ -692,18 +743,53 @@ function buildConn(c){
   const col=aColor(c.name),in_=ini(c.name);
   const linked=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(c.company||'').trim().toLowerCase());
   const badge=linked.length?`<span class="link-badge">🔗 ${linked.length} app${linked.length>1?'s':''}</span>`:'';
+  const typeBadge=`<span class="conn-type ${c.type==='hiring_manager'?'conn-type-hm':'conn-type-li'}">${c.type==='hiring_manager'?'Hiring Manager':'LinkedIn'}</span>`;
   const liBtn=c.linkedIn?`<a href="${esc(c.linkedIn)}" target="_blank" onclick="event.stopPropagation()"><div class="li-btn">in</div></a>`:'';
   const editDel=S.isOwner?`<button class="btn btn-ic btn-g" onclick="event.stopPropagation();openEditConnModal('${c.id}')" style="width:28px;height:28px">✏️</button><button class="btn btn-ic btn-d" onclick="event.stopPropagation();deleteConn('${c.id}')" style="width:28px;height:28px">🗑</button>`:'';
   return `<div class="conn-card" onclick="openViewConn('${c.id}')">
     <div class="cav" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
     <div class="cn-info">
-      <div class="cn-name">${esc(c.name)}</div>
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">${typeBadge}<span class="cn-name">${esc(c.name)}</span></div>
       ${c.title?`<div class="cn-title">${esc(c.title)}</div>`:''}
       ${c.company?`<div class="cn-co">@ ${esc(c.company)}</div>`:''}
+      ${c.contact?`<div style="font-size:10.5px;color:var(--muted);font-family:var(--font-mono)">${esc(c.contact)}</div>`:''}
       ${badge}
     </div>
     <div class="cn-actions">${liBtn}${editDel}</div>
   </div>`;
+}
+
+// ── CONTACT ROWS ──────────────────────────────────────────────────
+let _rowId=0;
+function addContactRow(data={}){
+  const id=`cr-${++_rowId}`;
+  const row=document.createElement('div');
+  row.className='contact-row';row.dataset.rid=id;
+  row.innerHTML=`
+    <button type="button" class="remove-contact" onclick="this.closest('.contact-row').remove()" title="Remove">✕</button>
+    <div class="contact-row-top">
+      <div class="fg">
+        <label class="fl">Type</label>
+        <select class="contact-type-select cr-type">
+          <option value="hiring_manager"${data.type==='hiring_manager'?' selected':''}>Hiring Manager</option>
+          <option value="linkedin"${(!data.type||data.type==='linkedin')?' selected':''}>LinkedIn Connection</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Name *</label><input type="text" class="fi cr-name" placeholder="Jane Smith" value="${esc(data.name||'')}"/></div>
+    </div>
+    <div class="contact-row-bottom">
+      <div class="fg"><label class="fl">LinkedIn / Profile URL</label><input type="url" class="fi cr-li" placeholder="https://linkedin.com/in/..." value="${esc(data.linkedIn||'')}"/></div>
+      <div class="fg"><label class="fl">Contact Details <span style="opacity:.6">(email or phone)</span></label><input type="text" class="fi cr-contact" placeholder="email or phone" value="${esc(data.contact||'')}"/></div>
+    </div>`;
+  document.getElementById('contact-rows').appendChild(row);
+}
+function getContactRows(){
+  return [...document.querySelectorAll('.contact-row')].map(r=>({
+    type:r.querySelector('.cr-type').value,
+    name:r.querySelector('.cr-name').value.trim(),
+    linkedIn:r.querySelector('.cr-li').value.trim(),
+    contact:r.querySelector('.cr-contact').value.trim(),
+  })).filter(c=>c.name);
 }
 
 // ── MODALS: ADD/EDIT APP ──────────────────────────────────────────
@@ -711,10 +797,11 @@ function openAddModal(){
   if(!S.isOwner)return;
   S.editingId=null;S.cvB64=null;S.cvName=null;
   document.getElementById('modal-title').textContent='New Application';
-  ['f-company','f-role','f-url','f-job-url','f-hm-name','f-hm-li','f-notes'].forEach(id=>document.getElementById(id).value='');
+  ['f-company','f-role','f-url','f-job-url','f-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-date').value=today();
   document.getElementById('f-status').value='applied';
   document.getElementById('cv-drop-inner').innerHTML=`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Stored on GitHub Gists — no size limit</div>`;
+  document.getElementById('contact-rows').innerHTML='';
   document.getElementById('linked-preview').innerHTML='';
   openModal('add-modal');
 }
@@ -729,12 +816,17 @@ function openEditModal(id){
   document.getElementById('f-status').value=a.status||'applied';
   document.getElementById('f-url').value=a.url||'';
   document.getElementById('f-job-url').value=a.jobUrl||'';
-  document.getElementById('f-hm-name').value=a.hmName||'';
-  document.getElementById('f-hm-li').value=a.hmLinkedIn||'';
   document.getElementById('f-notes').value=a.notes||'';
   document.getElementById('cv-drop-inner').innerHTML=(a.cvName||a.cvGistId)
     ?`<div class="cv-ok">📄 ${esc(a.cvName||'CV on file')} <span style="opacity:.6">(pick new to replace)</span></div>`
     :`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div>`;
+  // load contacts
+  document.getElementById('contact-rows').innerHTML='';
+  (a.contacts||[]).forEach(c=>addContactRow(c));
+  // legacy: migrate old hmName/hmLinkedIn fields
+  if(!a.contacts?.length && (a.hmName||a.hmLinkedIn)){
+    addContactRow({type:'hiring_manager',name:a.hmName||'',linkedIn:a.hmLinkedIn||'',contact:''});
+  }
   updateLinkedPreview();
   openModal('add-modal');
 }
@@ -742,8 +834,15 @@ function updateLinkedPreview(){
   const co=document.getElementById('f-company').value.trim();
   const linked=getLinked(co);
   const p=document.getElementById('linked-preview');
-  if(!linked.length){p.innerHTML=`<span style="font-size:11.5px;color:var(--muted)">${co?`No connections saved at "${esc(co)}"`:''}</span>`;return;}
-  p.innerHTML=linked.map(c=>`<span class="cc">🔗 ${esc(c.name)}${c.title?` · <span style="opacity:.65">${esc(c.title)}</span>`:''}</span>`).join('');
+  if(!linked.length){
+    p.innerHTML=`<span style="font-size:11.5px;color:var(--muted)">${co?`No saved connections at "${esc(co)}" — add them in the Connections section`:''}</span>`;
+    return;
+  }
+  p.innerHTML=linked.map(c=>`
+    <span class="cc" onclick="openViewConn('${c.id}')">
+      <span class="conn-type ${c.type==='hiring_manager'?'conn-type-hm':'conn-type-li'}" style="font-size:8px">${c.type==='hiring_manager'?'HM':'LI'}</span>
+      🔗 ${esc(c.name)}${c.title?` · <span style="opacity:.65">${esc(c.title)}</span>`:''}
+    </span>`).join('');
 }
 async function saveApplication(){
   const co=document.getElementById('f-company').value.trim(),ro=document.getElementById('f-role').value.trim();
@@ -769,6 +868,7 @@ async function saveApplication(){
     hmName:document.getElementById('f-hm-name').value.trim(),
     hmLinkedIn:document.getElementById('f-hm-li').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
+    contacts:getContactRows(),
     cvGistId,cvBinId,cvName,updatedAt:new Date().toISOString(),
   };
   if(S.editingId){const i=S.apps.findIndex(x=>x.id===S.editingId);if(i>=0)S.apps[i]=app;else S.apps.push(app);}
@@ -789,7 +889,8 @@ function openAddConnModal(){
   if(!S.isOwner)return;
   S.editingCId=null;
   document.getElementById('conn-modal-title').textContent='New Connection';
-  ['c-name','c-company','c-title','c-li','c-notes'].forEach(id=>document.getElementById(id).value='');
+  ['c-name','c-company','c-title','c-li','c-contact','c-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('c-type').value='linkedin';
   openModal('conn-modal');
   if(S.page!=='connections')switchPage('connections');
 }
@@ -799,9 +900,11 @@ function openEditConnModal(id){
   S.editingCId=id;
   document.getElementById('conn-modal-title').textContent='Edit Connection';
   document.getElementById('c-name').value=c.name||'';
+  document.getElementById('c-type').value=c.type||'linkedin';
   document.getElementById('c-company').value=c.company||'';
   document.getElementById('c-title').value=c.title||'';
   document.getElementById('c-li').value=c.linkedIn||'';
+  document.getElementById('c-contact').value=c.contact||'';
   document.getElementById('c-notes').value=c.notes||'';
   openModal('conn-modal');
 }
@@ -810,9 +913,12 @@ async function saveConnection(){
   if(!name){toast('Name required','error');return;}
   const conn={
     id:S.editingCId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
-    name,company:document.getElementById('c-company').value.trim(),
+    name,
+    type:document.getElementById('c-type').value,
+    company:document.getElementById('c-company').value.trim(),
     title:document.getElementById('c-title').value.trim(),
     linkedIn:document.getElementById('c-li').value.trim(),
+    contact:document.getElementById('c-contact').value.trim(),
     notes:document.getElementById('c-notes').value.trim(),
     addedAt:new Date().toISOString(),
   };
@@ -839,7 +945,14 @@ function openViewConn(id){
     <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
     <div style="display:flex;align-items:center;gap:11px;margin-bottom:1.25rem">
       <div class="cav" style="width:48px;height:48px;font-size:16px;background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
-      <div style="flex:1"><div style="font-family:var(--font-display);font-size:1.1rem;font-weight:500">${esc(c.name)}</div>${c.title?`<div style="font-size:12.5px;color:var(--text2)">${esc(c.title)}</div>`:''}${c.company?`<div style="font-size:11.5px;color:var(--muted)">@ ${esc(c.company)}</div>`:''}</div>
+      <div style="flex:1"><div style="font-family:var(--font-display);font-size:1.1rem;font-weight:500">${esc(c.name)}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+          <span class="conn-type ${c.type==='hiring_manager'?'conn-type-hm':'conn-type-li'}">${c.type==='hiring_manager'?'Hiring Manager':'LinkedIn Connection'}</span>
+        </div>
+        ${c.title?`<div style="font-size:12.5px;color:var(--text2);margin-top:2px">${esc(c.title)}</div>`:''}
+        ${c.company?`<div style="font-size:11.5px;color:var(--muted)">@ ${esc(c.company)}</div>`:''}
+        ${c.contact?`<div style="font-size:11px;color:var(--muted);font-family:var(--font-mono);margin-top:2px">📞 ${esc(c.contact)}</div>`:''}
+      </div>
       ${c.linkedIn?`<a href="${esc(c.linkedIn)}" target="_blank"><div class="li-btn" style="width:34px;height:34px;font-size:15px">in</div></a>`:''}
     </div>
     ${appsHtml}
@@ -868,8 +981,18 @@ function openViewModal(id){
       <div class="vf"><div class="vl">Date Applied</div><div class="vv">${ds}</div></div>
       ${a.url?`<div class="vf"><div class="vl">Company</div><a href="${esc(a.url)}" target="_blank" style="color:var(--accent4);font-size:13.5px">${esc(a.url.replace(/^https?:\/\//,'').split('/')[0])} ↗</a></div>`:''}
       ${a.jobUrl?`<div class="vf"><div class="vl">Job Posting</div><a href="${esc(a.jobUrl)}" target="_blank" style="color:var(--accent4);font-size:13.5px">View ↗</a></div>`:''}
-      ${a.hmName||a.hmLinkedIn?`<div class="vf"><div class="vl">Hiring Manager</div><div style="display:flex;align-items:center;gap:7px;font-size:13.5px">${a.hmName?`<span>${esc(a.hmName)}</span>`:''}${a.hmLinkedIn?`<a href="${esc(a.hmLinkedIn)}" target="_blank" style="color:var(--accent4);font-size:12px">🔗 LinkedIn</a>`:''}</div></div>`:''}
     </div>
+    ${(()=>{
+      const allContacts=[...(a.contacts||[])];
+      if(!allContacts.length&&(a.hmName||a.hmLinkedIn)) allContacts.push({type:'hiring_manager',name:a.hmName||'',linkedIn:a.hmLinkedIn||'',contact:''});
+      return allContacts.length?`<div class="vf"><div class="vl">Contacts</div><div style="display:flex;flex-direction:column;gap:6px">${allContacts.map(c=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+          <span class="conn-type ${c.type==='hiring_manager'?'conn-type-hm':'conn-type-li'}">${c.type==='hiring_manager'?'Hiring Manager':'LinkedIn'}</span>
+          <span style="font-size:13px;font-weight:500">${esc(c.name)}</span>
+          ${c.linkedIn?`<a href="${esc(c.linkedIn)}" target="_blank" style="color:var(--accent4);font-size:11.5px;margin-left:auto">🔗 LinkedIn</a>`:''}
+          ${c.contact?`<span style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">${esc(c.contact)}</span>`:''}
+        </div>`).join('')}</div></div>`:''
+    })()}
     ${lcHtml}${cvHtml}
     ${a.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(a.notes)}</div></div>`:''}
     <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end">${editBtn}<button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button></div>`;
