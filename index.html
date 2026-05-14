@@ -365,7 +365,48 @@ a{color:inherit;text-decoration:none;}
 .conn-type-hm{background:rgba(240,128,90,.15);color:#f7b89a;border:1px solid rgba(240,128,90,.25);}
 .conn-type-li{background:rgba(90,158,240,.15);color:#8ac4f7;border:1px solid rgba(90,158,240,.25);}
 
-/* TOAST */
+/* COMPANY PANEL */
+.company-panel{
+  width:170px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  position:fixed;top:0;left:var(--sidebar-w);bottom:0;
+  z-index:45;display:none;flex-direction:column;
+  transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+.company-panel.visible{display:flex;}
+.cp-header{
+  padding:.9rem 1rem .5rem;
+  font-size:10px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.cp-list{flex:1;overflow-y:auto;padding:.4rem .5rem;}
+.cp-item{
+  display:flex;align-items:center;gap:7px;
+  padding:.45rem .65rem;border-radius:var(--r-sm);
+  font-size:12.5px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;
+  border:1px solid transparent;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:2px;
+}
+.cp-item:hover{background:var(--surface2);color:var(--text);}
+.cp-item.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(200,240,90,.2);}
+.cp-item-dot{
+  width:6px;height:6px;border-radius:50%;flex-shrink:0;
+}
+.cp-count{
+  margin-left:auto;font-size:9.5px;font-family:var(--font-mono);
+  color:var(--muted);flex-shrink:0;
+}
+.cp-item.active .cp-count{color:var(--accent);}
+
+/* MAIN shifts right when panel open */
+.main.panel-open{margin-left:calc(var(--sidebar-w) + 170px);}
+
+/* RESPONSIVE */
 .toast{
   position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);
   border-radius:9px;padding:10px 15px;font-size:13px;z-index:600;
@@ -381,7 +422,8 @@ a{color:inherit;text-decoration:none;}
   .sidebar{transform:translateX(-100%);}
   .sidebar.open{transform:translateX(0);}
   .burger{display:flex;}
-  .main{margin-left:0;}
+  .main{margin-left:0 !important;}
+  .company-panel{display:none !important;}
   .topbar{padding-left:3.2rem;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
   .cards-grid,.conn-grid{grid-template-columns:1fr;}
@@ -443,6 +485,12 @@ a{color:inherit;text-decoration:none;}
     <div class="nav" onclick="showSettings()"><span class="nav-ic">⚙</span>Settings</div>
   </div>
 </aside>
+
+<!-- COMPANY FILTER PANEL -->
+<div class="company-panel" id="company-panel">
+  <div class="cp-header">Companies</div>
+  <div class="cp-list" id="cp-list"></div>
+</div>
 
 <!-- MAIN -->
 <div class="main" id="main-area" style="display:none">
@@ -557,7 +605,8 @@ a{color:inherit;text-decoration:none;}
 <script>
 const GH='https://api.github.com';
 let S={ghToken:null,dataGistId:null,apps:[],connections:[],isOwner:false,
-  editingId:null,editingCId:null,cvB64:null,cvName:null,filter:'all',page:'applications'};
+  editingId:null,editingCId:null,cvB64:null,cvName:null,
+  filter:'all',page:'applications',companyFilter:'all'};
 const COLORS=['#c8f05a','#5af0b8','#f0805a','#5a9ef0','#f05ab8','#f0d85a','#a05af0','#5af050','#f0c05a','#5af0d0'];
 const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
 const aColor=n=>COLORS[(n||'?').charCodeAt(0)%COLORS.length];
@@ -593,6 +642,7 @@ function toggleSb(){document.getElementById('sidebar').classList.toggle('open');
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').classList.remove('open');}
 function switchPage(pg){
   S.page=pg;
+  S.companyFilter='all'; // reset filter on page switch
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav[id^="nav-"]').forEach(n=>n.classList.remove('active'));
   document.getElementById(`page-${pg}`).classList.add('active');
@@ -600,7 +650,8 @@ function switchPage(pg){
   document.getElementById('page-title').textContent=pg==='applications'?'Applications':'Connections';
   document.getElementById('add-btn').onclick=pg==='applications'?openAddModal:openAddConnModal;
   closeSb();
-  if(pg==='connections')renderConnections();
+  if(pg==='connections'){renderConnections();}
+  renderCompanyPanel();
 }
 
 // ── DATA (GitHub Gist) ────────────────────────────────────────────
@@ -689,7 +740,66 @@ function go(){
   document.getElementById('f-date').value=today();
   renderAll();
 }
-function renderAll(){renderStats();renderFilterPills();renderCards();updateBadges();}
+function renderAll(){renderStats();renderFilterPills();renderCards();updateBadges();renderCompanyPanel();}
+
+// ── COMPANY PANEL ──────────────────────────────────────────────────
+function renderCompanyPanel(){
+  const panel=document.getElementById('company-panel');
+  const list=document.getElementById('cp-list');
+  const main=document.getElementById('main-area');
+
+  // Build company list depending on current page
+  let companies=[];
+  if(S.page==='applications'){
+    const map={};
+    S.apps.forEach(a=>{
+      const co=a.company||'';
+      if(!map[co])map[co]={name:co,count:0,color:aColor(co)};
+      map[co].count++;
+    });
+    companies=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  } else {
+    const map={};
+    S.connections.forEach(c=>{
+      const co=c.company||'(No company)';
+      if(!map[co])map[co]={name:co,count:0,color:aColor(co)};
+      map[co].count++;
+    });
+    companies=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  }
+
+  if(companies.length===0){
+    panel.classList.remove('visible');
+    main.classList.remove('panel-open');
+    return;
+  }
+
+  panel.classList.add('visible');
+  main.classList.add('panel-open');
+
+  const totalCount=S.page==='applications'?S.apps.length:S.connections.length;
+
+  list.innerHTML=`
+    <div class="cp-item${S.companyFilter==='all'?' active':''}" onclick="setCompanyFilter('all')">
+      <div class="cp-item-dot" style="background:var(--muted)"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis">All</span>
+      <span class="cp-count">${totalCount}</span>
+    </div>
+    ${companies.map(c=>`
+      <div class="cp-item${S.companyFilter===c.name?' active':''}" onclick="setCompanyFilter('${c.name.replace(/'/g,"\\'")}')" title="${esc(c.name)}">
+        <div class="cp-item-dot" style="background:${c.color}"></div>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</span>
+        <span class="cp-count">${c.count}</span>
+      </div>`).join('')}
+  `;
+}
+
+function setCompanyFilter(co){
+  S.companyFilter=co;
+  renderCompanyPanel();
+  if(S.page==='applications') renderCards();
+  else renderConnections();
+}
 function updateBadges(){
   document.getElementById('apps-count').textContent=S.apps.length;
   document.getElementById('conn-count').textContent=S.connections.length;
@@ -770,7 +880,8 @@ function renderCards(){
   const apps=S.apps.filter(a=>{
     const mf=S.filter==='all'||a.status===S.filter;
     const ms=!q||a.company.toLowerCase().includes(q)||a.role.toLowerCase().includes(q);
-    return mf&&ms;
+    const mc=S.companyFilter==='all'||a.company===S.companyFilter;
+    return mf&&ms&&mc;
   }).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 
   const area=document.getElementById('cards-area');
@@ -819,8 +930,11 @@ function buildCard(a){
 // ── CONNECTIONS ───────────────────────────────────────────────────
 function renderConnections(){
   const q=(document.getElementById('conn-search')?.value||'').toLowerCase();
-  const list=S.connections.filter(c=>!q||(c.name||'').toLowerCase().includes(q)||(c.company||'').toLowerCase().includes(q))
-    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const list=S.connections.filter(c=>{
+    const mq=!q||(c.name||'').toLowerCase().includes(q)||(c.company||'').toLowerCase().includes(q);
+    const mc=S.companyFilter==='all'||(c.company||'(No company)')===S.companyFilter;
+    return mq&&mc;
+  }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const area=document.getElementById('conn-area');
   if(!list.length){
     area.innerHTML=`<div class="empty"><div class="empty-ic">🔗</div><div class="empty-t">No connections yet</div><p class="empty-s">Add LinkedIn contacts here. They auto-link to job apps at the same company.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddConnModal()" style="margin-top:4px">+ Add First Connection</button>`:''}</div>`;
