@@ -72,7 +72,7 @@ a{color:inherit;text-decoration:none;}
 .sb-overlay.open{display:block;}
 
 /* MAIN */
-.main{margin-left:var(--sidebar-w);flex:1;min-width:0;display:flex;flex-direction:column;}
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh;}
 
 /* TOPBAR */
 .topbar{
@@ -103,12 +103,52 @@ a{color:inherit;text-decoration:none;}
 .btn-g{background:transparent;border-color:transparent;color:var(--muted);}
 .btn-g:hover{background:var(--surface2);color:var(--text);border-color:var(--border);}
 
-/* PAGES */
-.page{display:none;padding:1.5rem;flex:1;}
+/* STATS BAR — spans full width of main */
+.stats-bar{padding:1.25rem 1.5rem 1rem;flex-shrink:0;}
+.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:0;width:100%;}
+
+/* BODY SPLIT — company panel + scrollable content */
+.body-split{display:flex;flex:1;min-height:0;overflow:hidden;}
+
+/* COMPANY PANEL inside body-split */
+.company-panel{
+  width:160px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  transition:width .22s ease;
+}
+.company-panel.hidden{width:0;border-right:none;}
+.cp-header{
+  padding:.85rem 1rem .45rem;
+  font-size:10px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--border);flex-shrink:0;white-space:nowrap;
+}
+.cp-list{flex:1;overflow-y:auto;padding:.35rem .45rem;}
+.cp-item{
+  display:flex;align-items:center;gap:6px;
+  padding:.4rem .55rem;border-radius:var(--r-sm);
+  font-size:11.5px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;border:1px solid transparent;
+  margin-bottom:2px;min-width:0;
+}
+.cp-item:hover{background:var(--surface2);color:var(--text);}
+.cp-item.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(200,240,90,.2);}
+.cp-item-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.cp-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cp-count{margin-left:auto;font-size:9px;font-family:var(--font-mono);color:var(--muted);flex-shrink:0;padding-left:2px;}
+.cp-item.active .cp-count{color:var(--accent);}
+
+/* CONTENT AREA — scrollable right side */
+.content-area{flex:1;min-width:0;overflow-y:auto;}
+
+/* PAGES inside content-area */
+.page{display:none;padding:1.25rem 1.5rem;}
 .page.active{display:block;}
 
 /* STATS */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1.75rem;}
 .stat-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
   padding:1rem 1.15rem;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;
@@ -365,49 +405,7 @@ a{color:inherit;text-decoration:none;}
 .conn-type-hm{background:rgba(240,128,90,.15);color:#f7b89a;border:1px solid rgba(240,128,90,.25);}
 .conn-type-li{background:rgba(90,158,240,.15);color:#8ac4f7;border:1px solid rgba(90,158,240,.25);}
 
-/* COMPANY PANEL */
-.company-panel{
-  width:170px;flex-shrink:0;
-  background:var(--surface);
-  border-right:1px solid var(--border);
-  position:fixed;top:0;left:var(--sidebar-w);bottom:0;
-  z-index:45;display:none;flex-direction:column;
-  transition:transform .25s cubic-bezier(.4,0,.2,1);
-}
-.company-panel.visible{display:flex;}
-.cp-header{
-  padding:.9rem 1rem .5rem;
-  font-size:10px;font-weight:700;letter-spacing:.09em;
-  text-transform:uppercase;color:var(--muted);
-  border-bottom:1px solid var(--border);
-  flex-shrink:0;
-}
-.cp-list{flex:1;overflow-y:auto;padding:.4rem .5rem;}
-.cp-item{
-  display:flex;align-items:center;gap:7px;
-  padding:.45rem .65rem;border-radius:var(--r-sm);
-  font-size:12.5px;font-weight:500;color:var(--text2);
-  cursor:pointer;transition:all .15s;
-  border:1px solid transparent;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  margin-bottom:2px;
-}
-.cp-item:hover{background:var(--surface2);color:var(--text);}
-.cp-item.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(200,240,90,.2);}
-.cp-item-dot{
-  width:6px;height:6px;border-radius:50%;flex-shrink:0;
-}
-.cp-count{
-  margin-left:auto;font-size:9.5px;font-family:var(--font-mono);
-  color:var(--muted);flex-shrink:0;
-}
-.cp-item.active .cp-count{color:var(--accent);}
-
-/* MAIN shifts right when panel open */
-.main.panel-open{margin-left:calc(var(--sidebar-w) + 170px);}
-
-/* RESPONSIVE */
-.toast{
+/* TOAST */
   position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);
   border-radius:9px;padding:10px 15px;font-size:13px;z-index:600;
   transform:translateY(10px);opacity:0;transition:all .28s;max-width:320px;box-shadow:var(--shadow);
@@ -417,15 +415,16 @@ a{color:inherit;text-decoration:none;}
 .toast.error{border-color:rgba(240,90,90,.3);color:var(--danger);}
 
 /* RESPONSIVE */
-@media(max-width:920px){.stats-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}}
+@media(max-width:1100px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:920px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:680px){
   .sidebar{transform:translateX(-100%);}
   .sidebar.open{transform:translateX(0);}
   .burger{display:flex;}
-  .main{margin-left:0 !important;}
-  .company-panel{display:none !important;}
+  .main{margin-left:0;}
   .topbar{padding-left:3.2rem;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .company-panel{display:none !important;}
   .cards-grid,.conn-grid{grid-template-columns:1fr;}
   .page{padding:1rem;}
   .fg-grid{grid-template-columns:1fr;}
@@ -486,11 +485,7 @@ a{color:inherit;text-decoration:none;}
   </div>
 </aside>
 
-<!-- COMPANY FILTER PANEL -->
-<div class="company-panel" id="company-panel">
-  <div class="cp-header">Companies</div>
-  <div class="cp-list" id="cp-list"></div>
-</div>
+<!-- COMPANY FILTER PANEL (inside body-split, rendered by JS) -->
 
 <!-- MAIN -->
 <div class="main" id="main-area" style="display:none">
@@ -505,24 +500,40 @@ a{color:inherit;text-decoration:none;}
     </div>
   </div>
 
-  <!-- APPLICATIONS PAGE -->
-  <div class="page active" id="page-applications">
+  <!-- STATS — full width -->
+  <div class="stats-bar" id="stats-bar" style="display:none">
     <div class="stats-grid" id="stats-grid"></div>
-    <div class="toolbar">
-      <div class="sw"><span class="s-ic">🔍</span><input type="text" id="search-input" placeholder="Search company or role…" oninput="renderCards()"></div>
-      <div class="pills" id="filter-pills"></div>
-      <button class="btn btn-sm btn-g" id="add-btn2" onclick="openAddModal()" style="display:none;margin-left:auto">+ New</button>
-    </div>
-    <div id="cards-area"></div>
   </div>
 
-  <!-- CONNECTIONS PAGE -->
-  <div class="page" id="page-connections">
-    <div class="toolbar">
-      <div class="sw"><span class="s-ic">🔍</span><input type="text" id="conn-search" placeholder="Search name or company…" oninput="renderConnections()"></div>
-      <button class="btn btn-p btn-sm" id="add-conn-btn" onclick="openAddConnModal()" style="display:none;margin-left:auto">+ Add Connection</button>
+  <!-- BODY SPLIT: company panel + content -->
+  <div class="body-split">
+    <!-- Company panel lives here -->
+    <div class="company-panel hidden" id="company-panel">
+      <div class="cp-header">Companies</div>
+      <div class="cp-list" id="cp-list"></div>
     </div>
-    <div id="conn-area"></div>
+
+    <!-- Scrollable content -->
+    <div class="content-area" id="content-area">
+      <!-- APPLICATIONS PAGE -->
+      <div class="page active" id="page-applications">
+        <div class="toolbar">
+          <div class="sw"><span class="s-ic">🔍</span><input type="text" id="search-input" placeholder="Search company or role…" oninput="renderCards()"></div>
+          <div class="pills" id="filter-pills"></div>
+          <button class="btn btn-sm btn-g" id="add-btn2" onclick="openAddModal()" style="display:none;margin-left:auto">+ New</button>
+        </div>
+        <div id="cards-area"></div>
+      </div>
+
+      <!-- CONNECTIONS PAGE -->
+      <div class="page" id="page-connections">
+        <div class="toolbar">
+          <div class="sw"><span class="s-ic">🔍</span><input type="text" id="conn-search" placeholder="Search name or company…" oninput="renderConnections()"></div>
+          <button class="btn btn-p btn-sm" id="add-conn-btn" onclick="openAddConnModal()" style="display:none;margin-left:auto">+ Add Connection</button>
+        </div>
+        <div id="conn-area"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -642,13 +653,15 @@ function toggleSb(){document.getElementById('sidebar').classList.toggle('open');
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').classList.remove('open');}
 function switchPage(pg){
   S.page=pg;
-  S.companyFilter='all'; // reset filter on page switch
+  S.companyFilter='all';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav[id^="nav-"]').forEach(n=>n.classList.remove('active'));
   document.getElementById(`page-${pg}`).classList.add('active');
   document.getElementById(pg==='applications'?'nav-apps':'nav-conn').classList.add('active');
   document.getElementById('page-title').textContent=pg==='applications'?'Applications':'Connections';
   document.getElementById('add-btn').onclick=pg==='applications'?openAddModal:openAddConnModal;
+  // Stats bar only on Applications page
+  document.getElementById('stats-bar').style.display=pg==='applications'?'block':'none';
   closeSb();
   if(pg==='connections'){renderConnections();}
   renderCompanyPanel();
@@ -738,6 +751,7 @@ function go(){
     document.getElementById('main-area').insertBefore(banner,document.getElementById('main-area').firstChild.nextSibling);
   }
   document.getElementById('f-date').value=today();
+  document.getElementById('stats-bar').style.display='block';
   renderAll();
 }
 function renderAll(){renderStats();renderFilterPills();renderCards();updateBadges();renderCompanyPanel();}
@@ -746,9 +760,7 @@ function renderAll(){renderStats();renderFilterPills();renderCards();updateBadge
 function renderCompanyPanel(){
   const panel=document.getElementById('company-panel');
   const list=document.getElementById('cp-list');
-  const main=document.getElementById('main-area');
 
-  // Build company list depending on current page
   let companies=[];
   if(S.page==='applications'){
     const map={};
@@ -769,29 +781,24 @@ function renderCompanyPanel(){
   }
 
   if(companies.length===0){
-    panel.classList.remove('visible');
-    main.classList.remove('panel-open');
+    panel.classList.add('hidden');
     return;
   }
-
-  panel.classList.add('visible');
-  main.classList.add('panel-open');
+  panel.classList.remove('hidden');
 
   const totalCount=S.page==='applications'?S.apps.length:S.connections.length;
-
   list.innerHTML=`
     <div class="cp-item${S.companyFilter==='all'?' active':''}" onclick="setCompanyFilter('all')">
       <div class="cp-item-dot" style="background:var(--muted)"></div>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis">All</span>
+      <span class="cp-item-name">All</span>
       <span class="cp-count">${totalCount}</span>
     </div>
     ${companies.map(c=>`
-      <div class="cp-item${S.companyFilter===c.name?' active':''}" onclick="setCompanyFilter('${c.name.replace(/'/g,"\\'")}')" title="${esc(c.name)}">
+      <div class="cp-item${S.companyFilter===c.name?' active':''}" onclick="setCompanyFilter(${JSON.stringify(c.name)})" title="${esc(c.name)}">
         <div class="cp-item-dot" style="background:${c.color}"></div>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</span>
+        <span class="cp-item-name">${esc(c.name)}</span>
         <span class="cp-count">${c.count}</span>
-      </div>`).join('')}
-  `;
+      </div>`).join('')}`;
 }
 
 function setCompanyFilter(co){
