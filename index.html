@@ -806,17 +806,22 @@ function renderCompanyPanel(){
 
   const totalCount=S.page==='applications'?S.apps.length:S.connections.length;
   list.innerHTML=`
-    <div class="cp-item${S.companyFilter==='all'?' active':''}" onclick="setCompanyFilter('all')">
+    <div class="cp-item${S.companyFilter==='all'?' active':''}" data-co="all">
       <div class="cp-item-dot" style="background:var(--muted)"></div>
       <span class="cp-item-name">All</span>
       <span class="cp-count">${totalCount}</span>
     </div>
     ${companies.map(c=>`
-      <div class="cp-item${S.companyFilter===c.name?' active':''}" onclick="setCompanyFilter(${JSON.stringify(c.name)})" title="${esc(c.name)}">
+      <div class="cp-item${S.companyFilter===c.name?' active':''}" data-co="${esc(c.name)}" title="${esc(c.name)}">
         <div class="cp-item-dot" style="background:${c.color}"></div>
         <span class="cp-item-name">${esc(c.name)}</span>
         <span class="cp-count">${c.count}</span>
       </div>`).join('')}`;
+
+  // Attach click handlers via JS (avoids HTML attribute quoting issues)
+  list.querySelectorAll('.cp-item').forEach(el=>{
+    el.addEventListener('click',()=>setCompanyFilter(el.dataset.co));
+  });
 }
 
 function setCompanyFilter(co){
