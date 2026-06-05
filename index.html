@@ -1087,7 +1087,10 @@ function buildCard(a){
   const starBadge=isTarget?`<div class="target-star" title="Target Company">⭐</div>`:'';
 
   // Follow-up: only shown for 'applied' status
-  const fud=a.followUpDate||null;
+  // effectiveFud: stored date OR auto-computed from applied date (for legacy apps that predate the feature)
+  const storedFud=a.followUpDate||null;
+  const effectiveFud=storedFud||(a.date&&a.status==='applied'?addDays(a.date,14):null);
+  const fud=effectiveFud;
   const isApplied=a.status==='applied';
   const fst=fuStatus(fud);
   const alertOn=a.followUpAlert||(isApplied&&fud&&fud<=today());
@@ -1293,7 +1296,8 @@ function syncFollowUpVisibility(){
 async function logFollowUp(id){
   if(!S.isOwner){toast('Read-only mode','error');return;}
   const a=S.apps.find(x=>x.id===id);if(!a)return;
-  const logged=a.followUpDate||today();
+  // use stored date or auto-computed fallback for legacy apps
+  const logged=a.followUpDate||(a.date?addDays(a.date,14):today());
   const prev=[...S.apps];
   const updated={...a,
     followUpLog:[...(a.followUpLog||[]),logged],
@@ -1603,23 +1607,29 @@ function openViewModal(id){
     ${a.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(a.notes)}</div></div>`:''}
     ${(()=>{
       if(a.status!=='applied')return'';
-      const fud=a.followUpDate;
+      const storedFud=a.followUpDate||null;
+      const fud=storedFud||(a.date?addDays(a.date,14):null);
+      if(!fud)return'';
       const log=a.followUpLog||[];
       const fst=fuStatus(fud);
       const alertOn=a.followUpAlert||(fud&&fud<=today());
-      if(!fud&&!log.length)return'';
-      const fuNextNum=log.length+1;
       // log entries: Follow-up 1 ✓ [date], Follow-up 2 ✓ [date], …
       const logHtml=log.length?`<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">${log.map((d,i)=>`<div style="display:flex;align-items:center;gap:7px"><span style="font-size:10px;font-weight:600;color:var(--muted);font-family:var(--font-mono);white-space:nowrap">Follow-up ${i+1} ✓</span><span style="font-size:10px;font-family:var(--font-mono);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--muted)">${fmtDate(d)}</span></div>`).join('')}</div>`:'';
       const fuColor=fst==='overdue'?'#f07a3a':fst==='today'?'#f0b932':'#f0c84a';
       return`<div class="vf">
         <div class="vl">Follow-Up Tracker</div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:11px;font-weight:600;color:var(--muted);font-family:var(--font-mono)">Follow-up Date</span>
-          <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${fuColor}">${fud?fmtDate(fud):'—'}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+          <span style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">🔔 Follow-up Date</span>
+          <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${fuColor}">${fmtDate(fud)}</span>
           ${fst==='overdue'?'<span style="font-size:10px;background:rgba(240,122,58,.15);color:#f07a3a;border:1px solid rgba(240,122,58,.3);border-radius:4px;padding:1px 6px">Overdue</span>':fst==='today'?'<span style="font-size:10px;background:rgba(240,185,50,.15);color:#f0b932;border:1px solid rgba(240,185,50,.3);border-radius:4px;padding:1px 6px">Today!</span>':''}
-          ${S.isOwner?`<button class="fu-log-btn" onclick="logFollowUp('${a.id}');openViewModal('${a.id}')" style="font-size:11px;padding:3px 10px">✓ Log</button>`:''}
-          ${S.isOwner&&log.length?`<button class="fu-undo-btn" onclick="undoFollowUp('${a.id}');openViewModal('${a.id}')" style="font-size:11px;padding:3px 10px">↩ Undo</button>`:''}
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+            ${S.isOwner?`<button class="fu-log-btn" onclick="logFollowUp('${a.id}');openViewModal('${a.id}')" style="font-size:11px;padding:3px 10px">✓ Log</button>`:''}
+            ${S.isOwner&&log.length?`<button class="fu-undo-btn" onclick="undoFollowUp('${a.id}');openViewModal('${a.id}')" style="font-size:11px;padding:3px 10px">↩ Undo</button>`:''}
+            <label class="fu-toggle" title="${alertOn?'Highlight on — click to turn off':'Highlight off — click to enable'}" onclick="event.stopPropagation()" style="margin-left:4px">
+              <input type="checkbox" ${alertOn?'checked':''} onchange="toggleFollowUpAlert('${a.id}',this.checked);openViewModal('${a.id}')">
+              <div class="fu-track"><div class="fu-thumb"></div></div>
+            </label>
+          </div>
         </div>
         ${log.length?`<div style="margin-top:8px"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">History</div>${logHtml}</div>`:''}
       </div>`;
