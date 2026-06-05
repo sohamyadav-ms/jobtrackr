@@ -680,6 +680,13 @@ a{color:inherit;text-decoration:none;}
       </div>
       <div class="fg"><label class="fl">Company Website</label><input type="url" id="f-url" class="fi" placeholder="https://google.com"/></div>
       <div class="fg"><label class="fl">Job Posting URL</label><input type="url" id="f-job-url" class="fi" placeholder="https://linkedin.com/jobs/..."/></div>
+      <div class="fg full" id="fu-field-wrap">
+        <label class="fl" id="fu-field-label">Follow-up Date <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— auto: applied date + 14 days</span></label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="date" id="f-followup" class="fi" style="flex:1;min-width:0;max-width:200px;"/>
+          <button type="button" id="fu-reset-btn" onclick="resetFollowUp()" class="btn btn-sm btn-g" style="white-space:nowrap;flex-shrink:0" title="Reset to applied date + 14 days">↺ Reset</button>
+        </div>
+      </div>
       <div class="fg full">
         <label class="fl">Contacts <span style="color:var(--accent4);opacity:.8">(Hiring Manager / LinkedIn Connection)</span></label>
         <div class="contact-rows" id="contact-rows"></div>
@@ -704,10 +711,6 @@ a{color:inherit;text-decoration:none;}
         </div>
       </div>
       <div class="fg full"><label class="fl">Notes</label><textarea id="f-notes" class="ft" placeholder="Referral, salary, next steps…"></textarea></div>
-      <div class="fg" id="fu-field-wrap">
-        <label class="fl" id="fu-field-label">Follow-up Date <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— auto: applied date + 14 days</span></label>
-        <input type="date" id="f-followup" class="fi"/>
-      </div>
     </div>
     <div class="fa">
       <button class="btn" onclick="closeModal('add-modal')">Cancel</button>
@@ -1290,6 +1293,15 @@ function syncFollowUpVisibility(){
   const st=document.getElementById('f-status').value;
   const wrap=document.getElementById('fu-field-wrap');
   if(wrap) wrap.style.display=st==='applied'?'':'none';
+}
+function resetFollowUp(){
+  const d=document.getElementById('f-date').value;
+  if(d){
+    document.getElementById('f-followup').value=addDays(d,14);
+    toast('Follow-up date reset to +14 days','success');
+  } else {
+    toast('Set an applied date first','error');
+  }
 }
 
 // ── FOLLOW-UP ACTIONS ─────────────────────────────────────────────
