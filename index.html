@@ -559,7 +559,6 @@ a{color:inherit;text-decoration:none;}
       <span id="mode-badge" class="badge b-ro" style="display:none">READ ONLY</span>
       <button class="btn btn-sm" id="share-btn" onclick="copyShareLink()" style="display:none">↗ Share</button>
       <button class="btn btn-sm btn-g" onclick="showSettings()">⚙</button>
-      <button class="btn btn-p btn-sm" id="add-btn" onclick="openAddModal()" style="display:none">+ Add</button>
     </div>
   </div>
 
@@ -583,7 +582,7 @@ a{color:inherit;text-decoration:none;}
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="search-input" placeholder="Search company or role…" oninput="renderCards()"></div>
           <div class="pills" id="filter-pills"></div>
-          <button class="btn btn-sm btn-g" id="add-btn2" onclick="openAddModal()" style="display:none;margin-left:auto">+ New</button>
+          <button class="btn btn-p btn-sm" id="add-app-btn" onclick="openAddModal()" style="display:none;margin-left:auto">＋ Add Application</button>
         </div>
         <div id="cards-area"></div>
       </div>
@@ -592,7 +591,7 @@ a{color:inherit;text-decoration:none;}
       <div class="page" id="page-connections">
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="conn-search" placeholder="Search name or company…" oninput="renderConnections()"></div>
-          <button class="btn btn-p btn-sm" id="add-conn-btn" onclick="openAddConnModal()" style="display:none;margin-left:auto">+ Add Connection</button>
+          <button class="btn btn-p btn-sm" id="add-conn-btn" onclick="openAddConnModal()" style="display:none;margin-left:auto">＋ Add Connection</button>
         </div>
         <div id="conn-area"></div>
       </div>
@@ -601,7 +600,7 @@ a{color:inherit;text-decoration:none;}
       <div class="page" id="page-targets">
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="tc-search" placeholder="Search company…" oninput="renderTargets()"></div>
-          <button class="btn btn-p btn-sm" id="add-tc-btn" onclick="openAddTcModal()" style="display:none;margin-left:auto">⭐ Add Target</button>
+          <button class="btn btn-p btn-sm" id="add-tc-btn" onclick="openAddTcModal()" style="display:none;margin-left:auto">＋ Add Target Company</button>
         </div>
         <div id="tc-area"></div>
       </div>
@@ -759,9 +758,6 @@ function switchPage(pg){
   if(navMap[pg]) document.getElementById(navMap[pg]).classList.add('active');
   const titleMap={applications:'Applications',connections:'Connections',targets:'Target Companies'};
   document.getElementById('page-title').textContent=titleMap[pg]||pg;
-  // add button action
-  const addActions={applications:openAddModal,connections:openAddConnModal,targets:openAddTcModal};
-  document.getElementById('add-btn').onclick=addActions[pg]||openAddModal;
   // Stats bar only on Applications page
   document.getElementById('stats-bar').style.display=pg==='applications'?'block':'none';
   closeSb();
@@ -838,7 +834,7 @@ async function createDataGist(token){
 // ── SHOW APP ──────────────────────────────────────────────────────
 function go(){
   document.getElementById('main-area').style.cssText='display:flex;flex-direction:column;';
-  const ownerEls=['write-badge','share-btn','add-btn','add-btn2','share-nav','nav-add-app','nav-add-conn','nav-add-tc','add-conn-btn','add-tc-btn'];
+  const ownerEls=['write-badge','share-btn','share-nav','nav-add-app','nav-add-conn','nav-add-tc','add-app-btn','add-conn-btn','add-tc-btn'];
   if(S.isOwner){
     ownerEls.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
   } else {
