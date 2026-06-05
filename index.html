@@ -297,6 +297,44 @@ a{color:inherit;text-decoration:none;}
   border-radius:4px;padding:1px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 
+/* TARGET STAR BADGE on app card */
+.target-star{
+  position:absolute;top:9px;right:9px;
+  font-size:13px;line-height:1;
+  filter:drop-shadow(0 0 5px rgba(255,215,0,.55));
+  pointer-events:none;
+  z-index:2;
+}
+
+/* TARGET COMPANIES PAGE */
+.tc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.tc-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem 1.1rem;display:flex;flex-direction:column;gap:8px;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.tc-card:hover{background:var(--surface2);border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow);}
+.tc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:rgba(255,215,0,.45);}
+.tc-top{display:flex;align-items:center;gap:9px;}
+.tc-av{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:12px;font-weight:700;
+}
+.tc-info{flex:1;min-width:0;}
+.tc-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tc-url{font-size:11px;color:var(--accent4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tc-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.tc-app-badge{
+  font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:10px;
+  background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,90,.2);
+}
+.tc-actions{
+  display:flex;gap:5px;justify-content:flex-end;padding-top:7px;
+  border-top:1px solid var(--border);opacity:0;transition:opacity .2s;
+}
+.tc-card:hover .tc-actions{opacity:1;}
+
 /* EMPTY */
 .empty{text-align:center;padding:4rem 2rem;display:flex;flex-direction:column;align-items:center;gap:10px;}
 .empty-ic{font-size:3rem;opacity:.22;}
@@ -424,6 +462,7 @@ a{color:inherit;text-decoration:none;}
 .conn-type-li{background:rgba(90,158,240,.15);color:#8ac4f7;border:1px solid rgba(90,158,240,.25);}
 
 /* TOAST */
+.toast{
   position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);
   border-radius:9px;padding:10px 15px;font-size:13px;z-index:600;
   transform:translateY(10px);opacity:0;transition:all .28s;max-width:320px;box-shadow:var(--shadow);
@@ -489,6 +528,9 @@ a{color:inherit;text-decoration:none;}
   <div class="nav" id="nav-conn" onclick="switchPage('connections')">
     <span class="nav-ic">🔗</span>Connections<span class="nav-badge" id="conn-count">0</span>
   </div>
+  <div class="nav" id="nav-tc" onclick="switchPage('targets')">
+    <span class="nav-ic">⭐</span>Target Companies<span class="nav-badge" id="tc-count">0</span>
+  </div>
   <div class="sb-div"></div>
   <div class="sb-sec">Quick Add</div>
   <div class="nav" id="nav-add-app" onclick="openAddModal()" style="display:none">
@@ -496,6 +538,9 @@ a{color:inherit;text-decoration:none;}
   </div>
   <div class="nav" id="nav-add-conn" onclick="openAddConnModal()" style="display:none">
     <span class="nav-ic">＋</span>New Connection
+  </div>
+  <div class="nav" id="nav-add-tc" onclick="openAddTcModal()" style="display:none">
+    <span class="nav-ic">＋</span>Target Company
   </div>
   <div class="sb-bottom">
     <div class="nav" id="share-nav" onclick="copyShareLink()" style="display:none"><span class="nav-ic">↗</span>Share View</div>
@@ -550,6 +595,15 @@ a{color:inherit;text-decoration:none;}
           <button class="btn btn-p btn-sm" id="add-conn-btn" onclick="openAddConnModal()" style="display:none;margin-left:auto">+ Add Connection</button>
         </div>
         <div id="conn-area"></div>
+      </div>
+
+      <!-- TARGET COMPANIES PAGE -->
+      <div class="page" id="page-targets">
+        <div class="toolbar">
+          <div class="sw"><span class="s-ic">🔍</span><input type="text" id="tc-search" placeholder="Search company…" oninput="renderTargets()"></div>
+          <button class="btn btn-p btn-sm" id="add-tc-btn" onclick="openAddTcModal()" style="display:none;margin-left:auto">⭐ Add Target</button>
+        </div>
+        <div id="tc-area"></div>
       </div>
     </div>
   </div>
@@ -632,6 +686,23 @@ a{color:inherit;text-decoration:none;}
   </div>
 </div>
 
+<!-- ADD/EDIT TARGET COMPANY MODAL -->
+<div class="overlay" id="tc-modal">
+  <div class="modal modal-sm">
+    <button class="mc-btn" onclick="closeModal('tc-modal')">✕</button>
+    <div class="modal-title" id="tc-modal-title">New Target Company</div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div class="fg"><label class="fl">Company Name *</label><input type="text" id="tc-name" class="fi" placeholder="Stripe"/></div>
+      <div class="fg"><label class="fl">Website</label><input type="url" id="tc-url" class="fi" placeholder="https://stripe.com"/></div>
+      <div class="fg"><label class="fl">Notes <span style="opacity:.6;font-size:9px;text-transform:none;letter-spacing:0;font-weight:400">— why you want to work here</span></label><textarea id="tc-notes" class="ft" placeholder="Great culture, exciting product…" style="min-height:56px"></textarea></div>
+    </div>
+    <div class="fa">
+      <button class="btn" onclick="closeModal('tc-modal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveTarget()">Save Target</button>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW MODAL -->
 <div class="overlay" id="view-modal"><div class="modal" id="view-modal-content"></div></div>
 
@@ -640,8 +711,8 @@ a{color:inherit;text-decoration:none;}
 
 <script>
 const GH='https://api.github.com';
-let S={ghToken:null,dataGistId:null,apps:[],connections:[],isOwner:false,
-  editingId:null,editingCId:null,
+let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],isOwner:false,
+  editingId:null,editingCId:null,editingTCId:null,
   cvB64:null,cvName:null,
   clB64:null,clName:null,
   filter:'all',page:'applications',companyFilter:'all'};
@@ -684,13 +755,18 @@ function switchPage(pg){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav[id^="nav-"]').forEach(n=>n.classList.remove('active'));
   document.getElementById(`page-${pg}`).classList.add('active');
-  document.getElementById(pg==='applications'?'nav-apps':'nav-conn').classList.add('active');
-  document.getElementById('page-title').textContent=pg==='applications'?'Applications':'Connections';
-  document.getElementById('add-btn').onclick=pg==='applications'?openAddModal:openAddConnModal;
+  const navMap={applications:'nav-apps',connections:'nav-conn',targets:'nav-tc'};
+  if(navMap[pg]) document.getElementById(navMap[pg]).classList.add('active');
+  const titleMap={applications:'Applications',connections:'Connections',targets:'Target Companies'};
+  document.getElementById('page-title').textContent=titleMap[pg]||pg;
+  // add button action
+  const addActions={applications:openAddModal,connections:openAddConnModal,targets:openAddTcModal};
+  document.getElementById('add-btn').onclick=addActions[pg]||openAddModal;
   // Stats bar only on Applications page
   document.getElementById('stats-bar').style.display=pg==='applications'?'block':'none';
   closeSb();
-  if(pg==='connections'){renderConnections();}
+  if(pg==='connections') renderConnections();
+  else if(pg==='targets') renderTargets();
   renderCompanyPanel();
 }
 
@@ -716,7 +792,7 @@ async function load(){
     if(f.truncated){const raw=await fetchT(f.raw_url);content=await raw.text();}
     else content=f.content;
     const rec=JSON.parse(content);
-    S.apps=rec.apps||[];S.connections=rec.connections||[];
+    S.apps=rec.apps||[];S.connections=rec.connections||[];S.targetCompanies=rec.targetCompanies||[];
     return true;
   }catch(e){
     toast(e.name==='AbortError'?'Request timed out':'Load failed: '+e.message,'error');
@@ -729,7 +805,7 @@ async function save(){
   if(!S.isOwner||!S.ghToken||!S.dataGistId)return false;
   try{
     const lean=S.apps.map(({cvBase64,...rest})=>rest);
-    const payload=JSON.stringify({apps:lean,connections:S.connections},null,2);
+    const payload=JSON.stringify({apps:lean,connections:S.connections,targetCompanies:S.targetCompanies},null,2);
     const r=await fetchT(`${GH}/gists/${S.dataGistId}`,{
       method:'PATCH',
       headers:{'Authorization':`token ${S.ghToken}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
@@ -751,7 +827,7 @@ async function createDataGist(token){
     body:JSON.stringify({
       description:'JobTrackr — Job Application Data',
       public:false,
-      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[]},null,2)}}
+      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[],targetCompanies:[]},null,2)}}
     })
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Failed to create Gist');}
@@ -762,7 +838,7 @@ async function createDataGist(token){
 // ── SHOW APP ──────────────────────────────────────────────────────
 function go(){
   document.getElementById('main-area').style.cssText='display:flex;flex-direction:column;';
-  const ownerEls=['write-badge','share-btn','add-btn','add-btn2','share-nav','nav-add-app','nav-add-conn','add-conn-btn'];
+  const ownerEls=['write-badge','share-btn','add-btn','add-btn2','share-nav','nav-add-app','nav-add-conn','nav-add-tc','add-conn-btn','add-tc-btn'];
   if(S.isOwner){
     ownerEls.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
   } else {
@@ -783,10 +859,14 @@ function go(){
 }
 function renderAll(){renderStats();renderFilterPills();renderCards();updateBadges();renderCompanyPanel();}
 
+
 // ── COMPANY PANEL ──────────────────────────────────────────────────
 function renderCompanyPanel(){
   const panel=document.getElementById('company-panel');
   const list=document.getElementById('cp-list');
+
+  // Targets page has no company panel
+  if(S.page==='targets'){panel.classList.add('hidden');return;}
 
   let companies=[];
   if(S.page==='applications'){
@@ -842,6 +922,7 @@ function setCompanyFilter(co){
 function updateBadges(){
   document.getElementById('apps-count').textContent=S.apps.length;
   document.getElementById('conn-count').textContent=S.connections.length;
+  document.getElementById('tc-count').textContent=S.targetCompanies.length;
 }
 
 // ── STATS ─────────────────────────────────────────────────────────
@@ -939,6 +1020,10 @@ function buildCard(a){
   const hasCv=a.cvName||a.cvGistId||a.cvBinId||a.cvBase64;
   const hasCl=a.clName||a.clGistId;
 
+  // Target company star badge
+  const isTarget=S.targetCompanies.some(t=>(t.name||'').trim().toLowerCase()===(a.company||'').trim().toLowerCase());
+  const starBadge=isTarget?`<div class="target-star" title="Target Company">⭐</div>`:'';
+
   const chips=[
     `<span class="mc">📅 ${ds}</span>`,
     a.url?`<span class="mc"><a href="${esc(a.url)}" target="_blank" onclick="event.stopPropagation()">🌐 ${esc(a.url.replace(/^https?:\/\//,'').split('/')[0])}</a></span>`:'',
@@ -957,6 +1042,7 @@ function buildCard(a){
   const actHtml=S.isOwner?`<div class="card-actions"><button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditModal('${a.id}')">✏️ Edit</button><button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteApp('${a.id}')">🗑 Delete</button></div>`:'';
 
   return `<div class="app-card" onclick="openViewModal('${a.id}')">
+    ${starBadge}
     <div class="ct">
       <div class="ca" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
       <div class="ci"><div class="cco">${esc(a.company)}</div><div class="cro">${esc(a.role)}</div></div>
@@ -1106,6 +1192,7 @@ function updateLinkedPreview(){
     </span>`).join('');
 }
 async function saveApplication(){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
   const co=document.getElementById('f-company').value.trim(),ro=document.getElementById('f-role').value.trim();
   if(!co||!ro){toast('Company and Role required','error');return;}
 
@@ -1224,6 +1311,90 @@ async function deleteConn(id){
   if(!confirm('Delete connection?'))return;
   S.connections=S.connections.filter(c=>c.id!==id);
   if(await save()){renderConnections();updateBadges();renderCards();toast('Deleted','success');}
+}
+
+// ── TARGET COMPANIES ──────────────────────────────────────────────
+function isTargetCompany(name){
+  return S.targetCompanies.some(t=>(t.name||'').trim().toLowerCase()===(name||'').trim().toLowerCase());
+}
+
+function renderTargets(){
+  const q=(document.getElementById('tc-search')?.value||'').toLowerCase();
+  const list=S.targetCompanies.filter(t=>!q||(t.name||'').toLowerCase().includes(q))
+    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const area=document.getElementById('tc-area');
+  if(!list.length){
+    area.innerHTML=`<div class="empty"><div class="empty-ic">⭐</div><div class="empty-t">No target companies yet</div><p class="empty-s">Add dream companies here. Applications to those companies will be starred automatically.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddTcModal()" style="margin-top:4px">⭐ Add First Target</button>`:''}</div>`;
+    return;
+  }
+  area.innerHTML=`<div class="tc-grid">${list.map(buildTcCard).join('')}</div>`;
+}
+
+function buildTcCard(t){
+  const col=aColor(t.name),in_=ini(t.name);
+  const apps=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(t.name||'').trim().toLowerCase());
+  const appBadge=apps.length?`<span class="tc-app-badge">📋 ${apps.length} app${apps.length>1?'s':''}</span>`:'';
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditTcModal('${t.id}')">✏️ Edit</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteTc('${t.id}')">🗑 Delete</button>`:'';
+  return `<div class="tc-card">
+    <div class="tc-top">
+      <div class="tc-av" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
+      <div class="tc-info">
+        <div class="tc-name">${esc(t.name)}</div>
+        ${t.url?`<div class="tc-url">${esc(t.url.replace(/^https?:\/\//,'').replace(/\/$/,''))}</div>`:''}
+      </div>
+      ${t.url?`<a href="${esc(t.url)}" target="_blank" onclick="event.stopPropagation()" class="li-btn" title="Open website" style="font-size:13px">↗</a>`:''}
+    </div>
+    <div class="tc-meta">
+      ${appBadge}
+      ${apps.length?apps.slice(0,2).map(a=>`<span class="sb s-${a.status}" style="font-size:9px">${SLABELS[a.status]||a.status}</span>`).join(''):''}
+    </div>
+    ${t.notes?`<div class="cnotes" style="font-size:11px">${esc(t.notes)}</div>`:''}
+    <div class="tc-actions">${editDel}</div>
+  </div>`;
+}
+
+function openAddTcModal(){
+  if(!S.isOwner)return;
+  S.editingTCId=null;
+  document.getElementById('tc-modal-title').textContent='New Target Company';
+  ['tc-name','tc-url','tc-notes'].forEach(id=>document.getElementById(id).value='');
+  if(S.page!=='targets')switchPage('targets');
+  openModal('tc-modal');
+}
+function openEditTcModal(id){
+  if(!S.isOwner)return;
+  const t=S.targetCompanies.find(x=>x.id===id);if(!t)return;
+  S.editingTCId=id;
+  document.getElementById('tc-modal-title').textContent='Edit Target Company';
+  document.getElementById('tc-name').value=t.name||'';
+  document.getElementById('tc-url').value=t.url||'';
+  document.getElementById('tc-notes').value=t.notes||'';
+  openModal('tc-modal');
+}
+async function saveTarget(){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  const name=document.getElementById('tc-name').value.trim();
+  if(!name){toast('Company name required','error');return;}
+  const tc={
+    id:S.editingTCId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    name,
+    url:document.getElementById('tc-url').value.trim(),
+    notes:document.getElementById('tc-notes').value.trim(),
+    addedAt:new Date().toISOString(),
+  };
+  if(S.editingTCId){const i=S.targetCompanies.findIndex(x=>x.id===S.editingTCId);if(i>=0)S.targetCompanies[i]=tc;else S.targetCompanies.push(tc);}
+  else S.targetCompanies.unshift(tc);
+  const ok=await save();
+  if(ok){closeModal('tc-modal');renderTargets();updateBadges();renderCards();toast(S.editingTCId?'Target updated!':'Target company added! ⭐','success');}
+  else if(!S.editingTCId)S.targetCompanies.shift();
+}
+async function deleteTc(id){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  if(!confirm('Remove this target company?'))return;
+  S.targetCompanies=S.targetCompanies.filter(t=>t.id!==id);
+  if(await save()){renderTargets();updateBadges();renderCards();toast('Removed','success');}
 }
 
 // ── VIEW MODALS ───────────────────────────────────────────────────
@@ -1358,7 +1529,7 @@ async function saveApiKey(){
   try{
     const gistId=await createDataGist(gh);
     S.ghToken=gh;S.dataGistId=gistId;S.isOwner=true;
-    S.apps=[];S.connections=[];
+    S.apps=[];S.connections=[];S.targetCompanies=[];
     localStorage.setItem('jt_gh',gh);
     localStorage.setItem('jt_gist',gistId);
     document.getElementById('setup-screen').classList.remove('open');
@@ -1421,7 +1592,7 @@ function copyShareLink(){
   navigator.clipboard.writeText(url).then(()=>toast('Share link copied! 🔗','success'));
 }
 function exportData(){
-  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections},null,2)],{type:'application/json'});
+  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections,targetCompanies:S.targetCompanies},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();
 }
 function clearLocal(){
