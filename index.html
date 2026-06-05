@@ -671,7 +671,7 @@ a{color:inherit;text-decoration:none;}
       <div class="fg"><label class="fl">Role *</label><input type="text" id="f-role" class="fi" placeholder="Product Manager"/></div>
       <div class="fg"><label class="fl">Date Applied</label><input type="date" id="f-date" class="fi" oninput="autoFollowUp()"/></div>
       <div class="fg"><label class="fl">Status</label>
-        <select id="f-status" class="fs">
+        <select id="f-status" class="fs" onchange="syncFollowUpVisibility()">
           <option value="pending">Pending Application</option><option value="applied">Applied</option>
           <option value="interviewing">Interviewing</option><option value="offer">Offer 🎉</option>
           <option value="rejected">Rejected</option><option value="ghosted">Ghosted</option>
@@ -704,8 +704,8 @@ a{color:inherit;text-decoration:none;}
         </div>
       </div>
       <div class="fg full"><label class="fl">Notes</label><textarea id="f-notes" class="ft" placeholder="Referral, salary, next steps…"></textarea></div>
-      <div class="fg">
-        <label class="fl">Follow-Up Date <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— auto: 14 days after applied date</span></label>
+      <div class="fg" id="fu-field-wrap">
+        <label class="fl" id="fu-field-label">Follow-up 1 <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— auto: applied date + 14 days</span></label>
         <input type="date" id="f-followup" class="fi"/>
       </div>
     </div>
@@ -1086,21 +1086,20 @@ function buildCard(a){
   const isTarget=S.targetCompanies.some(t=>(t.name||'').trim().toLowerCase()===(a.company||'').trim().toLowerCase());
   const starBadge=isTarget?`<div class="target-star" title="Target Company">⭐</div>`:'';
 
-  // Follow-up: auto-activate alert if date reached
+  // Follow-up: only shown for 'applied' status
   const fud=a.followUpDate||null;
+  const isApplied=a.status==='applied';
   const fst=fuStatus(fud);
-  const alertOn=a.followUpAlert||(fud&&fud<=today());
-  const fuDateLabel=fud?fmtDate(fud):'—';
-  const fuDateClass=fst==='overdue'?'overdue':fst==='today'?'today':'';
-  const fuHint=fst==='overdue'?'Overdue':fst==='today'?'Today!':'Follow-up';
+  const alertOn=a.followUpAlert||(isApplied&&fud&&fud<=today());
+  const fuNextNum=(a.followUpLog||[]).length+1;
 
-  const fuRowHtml=fud||S.isOwner?`<div class="fu-row" onclick="event.stopPropagation()">
-    <span class="fu-label">🔔 ${fuHint}</span>
-    <span class="fu-date ${fuDateClass}">${fuDateLabel}</span>
+  const fuRowHtml=(isApplied&&fud)||( isApplied&&S.isOwner)?`<div class="fu-row" onclick="event.stopPropagation()">
+    <span class="fu-label">🔔 Follow-up ${fuNextNum}${fst==='overdue'?' (Overdue)':fst==='today'?' (Today!)':''}</span>
+    <span class="fu-date ${fst==='overdue'?'overdue':fst==='today'?'today':''}">${fud?fmtDate(fud):'—'}</span>
     <div class="fu-actions">
       ${S.isOwner?`<button class="fu-log-btn" onclick="logFollowUp('${a.id}')">✓ Log</button>`:''}
       ${S.isOwner&&(a.followUpLog||[]).length?`<button class="fu-undo-btn" onclick="undoFollowUp('${a.id}')" title="Undo last log">↩</button>`:''}
-      <label class="fu-toggle" title="${alertOn?'Alert on — click to dismiss':'Alert off — click to enable'}" onclick="event.stopPropagation()">
+      <label class="fu-toggle" title="${alertOn?'Highlight on':'Highlight off'}" onclick="event.stopPropagation()">
         <input type="checkbox" ${alertOn?'checked':''} onchange="toggleFollowUpAlert('${a.id}',this.checked)">
         <div class="fu-track"><div class="fu-thumb"></div></div>
       </label>
@@ -1124,7 +1123,7 @@ function buildCard(a){
   const notesHtml=a.notes?`<div class="cnotes">${esc(a.notes)}</div>`:'';
   const actHtml=S.isOwner?`<div class="card-actions"><button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditModal('${a.id}')">✏️ Edit</button><button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteApp('${a.id}')">🗑 Delete</button></div>`:'';
 
-  return `<div class="app-card${alertOn?' fu-alert':''}" onclick="openViewModal('${a.id}')">
+  return `<div class="app-card${(alertOn&&isApplied)?' fu-alert':''}" onclick="openViewModal('${a.id}')">
     ${starBadge}
     <div class="ct">
       <div class="ca" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
@@ -1228,10 +1227,12 @@ function openAddModal(){
   document.getElementById('f-date').value=today();
   document.getElementById('f-status').value='applied';
   document.getElementById('f-followup').value=addDays(today(),14);
+  document.getElementById('fu-field-label').firstChild.textContent='Follow-up 1 ';
   document.getElementById('cv-drop-inner').innerHTML=`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Stored on GitHub Gists — no size limit</div>`;
   document.getElementById('cl-drop-inner').innerHTML=`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Optional — stored on GitHub Gists</div>`;
   document.getElementById('contact-rows').innerHTML='';
   document.getElementById('linked-preview').innerHTML='';
+  syncFollowUpVisibility();
   openModal('add-modal');
 }
 function openEditModal(id){
@@ -1248,6 +1249,10 @@ function openEditModal(id){
   document.getElementById('f-notes').value=a.notes||'';
   // follow-up: use stored value or auto-calc from date
   document.getElementById('f-followup').value=a.followUpDate||(a.date?addDays(a.date,14):'');
+  // label: next follow-up number = log.length + 1
+  const fuNum=(a.followUpLog||[]).length+1;
+  document.getElementById('fu-field-label').firstChild.textContent=`Follow-up ${fuNum} `;
+  syncFollowUpVisibility();
   document.getElementById('cv-drop-inner').innerHTML=(a.cvName||a.cvGistId)
     ?`<div class="cv-ok">📄 ${esc(a.cvName||'CV on file')} <span style="opacity:.6">(pick new to replace)</span></div>`
     :`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div>`;
@@ -1281,6 +1286,11 @@ function updateLinkedPreview(){
 function autoFollowUp(){
   const d=document.getElementById('f-date').value;
   if(d) document.getElementById('f-followup').value=addDays(d,14);
+}
+function syncFollowUpVisibility(){
+  const st=document.getElementById('f-status').value;
+  const wrap=document.getElementById('fu-field-wrap');
+  if(wrap) wrap.style.display=st==='applied'?'':'none';
 }
 
 // ── FOLLOW-UP ACTIONS ─────────────────────────────────────────────
@@ -1596,22 +1606,26 @@ function openViewModal(id){
     ${lcHtml}${cvHtml}${clHtml}
     ${a.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(a.notes)}</div></div>`:''}
     ${(()=>{
+      if(a.status!=='applied')return'';
       const fud=a.followUpDate;
       const log=a.followUpLog||[];
       const fst=fuStatus(fud);
       const alertOn=a.followUpAlert||(fud&&fud<=today());
       if(!fud&&!log.length)return'';
-      const logHtml=log.length?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${log.map((d,i)=>`<span style="font-size:10px;font-family:var(--font-mono);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--muted)">${fmtDate(d)}</span>`).join('')}</div>`:'';
+      const fuNextNum=log.length+1;
+      // log entries: Follow-up 1 ✓ [date], Follow-up 2 ✓ [date], …
+      const logHtml=log.length?`<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">${log.map((d,i)=>`<div style="display:flex;align-items:center;gap:7px"><span style="font-size:10px;font-weight:600;color:var(--muted);font-family:var(--font-mono);white-space:nowrap">Follow-up ${i+1} ✓</span><span style="font-size:10px;font-family:var(--font-mono);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--muted)">${fmtDate(d)}</span></div>`).join('')}</div>`:'';
       const fuColor=fst==='overdue'?'#f07a3a':fst==='today'?'#f0b932':'#f0c84a';
       return`<div class="vf">
-        <div class="vl">Follow-Up</div>
+        <div class="vl">Follow-Up Tracker</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:600;color:var(--muted);font-family:var(--font-mono)">Follow-up ${fuNextNum}</span>
           <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${fuColor}">${fud?fmtDate(fud):'—'}</span>
           ${fst==='overdue'?'<span style="font-size:10px;background:rgba(240,122,58,.15);color:#f07a3a;border:1px solid rgba(240,122,58,.3);border-radius:4px;padding:1px 6px">Overdue</span>':fst==='today'?'<span style="font-size:10px;background:rgba(240,185,50,.15);color:#f0b932;border:1px solid rgba(240,185,50,.3);border-radius:4px;padding:1px 6px">Today!</span>':''}
-          ${S.isOwner?`<button class="fu-log-btn" onclick="logFollowUp('${a.id}');closeModal('view-modal')" style="font-size:11px;padding:3px 10px">✓ Log Follow-Up</button>`:''}
-          ${S.isOwner&&log.length?`<button class="fu-undo-btn" onclick="undoFollowUp('${a.id}');closeModal('view-modal')" style="font-size:11px;padding:3px 10px">↩ Undo</button>`:''}
+          ${S.isOwner?`<button class="fu-log-btn" onclick="logFollowUp('${a.id}');openViewModal('${a.id}')" style="font-size:11px;padding:3px 10px">✓ Log Follow-up ${fuNextNum}</button>`:''}
+          ${S.isOwner&&log.length?`<button class="fu-undo-btn" onclick="undoFollowUp('${a.id}');openViewModal('${a.id}')" style="font-size:11px;padding:3px 10px">↩ Undo</button>`:''}
         </div>
-        ${log.length?`<div style="margin-top:5px"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Log History</div>${logHtml}</div>`:''}
+        ${log.length?`<div style="margin-top:8px"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">History</div>${logHtml}</div>`:''}
       </div>`;
     })()}
     <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end">${editBtn}<button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button></div>`;
