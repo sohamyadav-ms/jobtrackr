@@ -930,9 +930,6 @@ function renderCompanyPanel(){
   const panel=document.getElementById('company-panel');
   const list=document.getElementById('cp-list');
 
-  // Targets page has no company panel
-  if(S.page==='targets'){panel.classList.add('hidden');return;}
-
   let companies=[];
   if(S.page==='applications'){
     const map={};
@@ -942,7 +939,7 @@ function renderCompanyPanel(){
       map[co].count++;
     });
     companies=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
-  } else {
+  } else if(S.page==='connections'){
     const map={};
     S.connections.forEach(c=>{
       const co=c.company||'(No company)';
@@ -950,6 +947,13 @@ function renderCompanyPanel(){
       map[co].count++;
     });
     companies=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  } else if(S.page==='targets'){
+    companies=S.targetCompanies.map(t=>({
+      name:t.name,
+      color:aColor(t.name),
+      count:S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(t.name||'').trim().toLowerCase()).length
+           +S.connections.filter(c=>(c.company||'').trim().toLowerCase()===(t.name||'').trim().toLowerCase()).length,
+    })).sort((a,b)=>a.name.localeCompare(b.name));
   }
 
   if(companies.length===0){
@@ -958,7 +962,9 @@ function renderCompanyPanel(){
   }
   panel.classList.remove('hidden');
 
-  const totalCount=S.page==='applications'?S.apps.length:S.connections.length;
+  const totalCount=S.page==='applications'?S.apps.length
+    :S.page==='connections'?S.connections.length
+    :S.targetCompanies.length;
   list.innerHTML=`
     <div class="cp-item${S.companyFilter==='all'?' active':''}" data-co="all">
       <div class="cp-item-dot" style="background:var(--muted)"></div>
@@ -982,7 +988,8 @@ function setCompanyFilter(co){
   S.companyFilter=co;
   renderCompanyPanel();
   if(S.page==='applications') renderCards();
-  else renderConnections();
+  else if(S.page==='connections') renderConnections();
+  else if(S.page==='targets') renderTargets();
 }
 function updateBadges(){
   document.getElementById('apps-count').textContent=S.apps.length;
@@ -1478,8 +1485,11 @@ function isTargetCompany(name){
 
 function renderTargets(){
   const q=(document.getElementById('tc-search')?.value||'').toLowerCase();
-  const list=S.targetCompanies.filter(t=>!q||(t.name||'').toLowerCase().includes(q))
-    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const list=S.targetCompanies.filter(t=>{
+    const mq=!q||(t.name||'').toLowerCase().includes(q);
+    const mc=S.companyFilter==='all'||(t.name||'')=== S.companyFilter;
+    return mq&&mc;
+  }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const area=document.getElementById('tc-area');
   if(!list.length){
     area.innerHTML=`<div class="empty"><div class="empty-ic">⭐</div><div class="empty-t">No target companies yet</div><p class="empty-s">Add dream companies here. Applications to those companies will be starred automatically.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddTcModal()" style="margin-top:4px">⭐ Add First Target</button>`:''}</div>`;
@@ -1495,11 +1505,10 @@ function buildTcCard(t){
   const conns=S.connections.filter(c=>(c.company||'').trim().toLowerCase()===tName);
   const appBadge=apps.length?`<span class="tc-app-badge">📋 ${apps.length} app${apps.length>1?'s':''}</span>`:'';
   const connBadge=conns.length?`<span class="tc-app-badge" style="background:var(--accent4-dim);color:var(--accent4);border-color:rgba(90,158,240,.2)">🔗 ${conns.length} connection${conns.length>1?'s':''}</span>`:'';
-  const connChips=conns.length?`<div class="linked-contacts" style="margin-top:4px">${conns.map(c=>`<span class="cc" onclick="event.stopPropagation();openViewConn('${c.id}')">${c.type==='hiring_manager'?'👔':'🔗'} ${esc(c.name)}${c.title?` · <span style="opacity:.65;font-size:10px">${esc(c.title)}</span>`:''}</span>`).join('')}</div>`:'';
   const editDel=S.isOwner?`
     <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditTcModal('${t.id}')">✏️ Edit</button>
     <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteTc('${t.id}')">🗑 Delete</button>`:'';
-  return `<div class="tc-card">
+  return `<div class="tc-card" style="cursor:pointer" onclick="openViewTarget('${t.id}')">
     <div class="tc-top">
       <div class="tc-av" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
       <div class="tc-info">
@@ -1511,12 +1520,68 @@ function buildTcCard(t){
     <div class="tc-meta">
       ${appBadge}
       ${connBadge}
-      ${apps.length?apps.slice(0,2).map(a=>`<span class="sb s-${a.status}" style="font-size:9px">${SLABELS[a.status]||a.status}</span>`).join(''):''}
+      ${apps.length?apps.slice(0,3).map(a=>`<span class="sb s-${a.status}" style="font-size:9px">${SLABELS[a.status]||a.status}</span>`).join(''):''}
     </div>
-    ${connChips}
     ${t.notes?`<div class="cnotes" style="font-size:11px">${esc(t.notes)}</div>`:''}
     <div class="tc-actions">${editDel}</div>
   </div>`;
+}
+
+function openViewTarget(id){
+  const t=S.targetCompanies.find(x=>x.id===id);if(!t)return;
+  const col=aColor(t.name),in_=ini(t.name);
+  const tName=(t.name||'').trim().toLowerCase();
+  const conns=S.connections.filter(c=>(c.company||'').trim().toLowerCase()===tName);
+  const apps=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===tName);
+
+  const connsHtml=conns.length?`<div class="vf">
+    <div class="vl">Connections (${conns.length})</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${conns.map(c=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border);cursor:pointer"
+             onclick="closeModal('view-modal');openViewConn('${c.id}')">
+          <span class="conn-type ${c.type==='hiring_manager'?'conn-type-hm':'conn-type-li'}">${c.type==='hiring_manager'?'Hiring Manager':'LinkedIn'}</span>
+          <span style="font-size:13px;font-weight:500;flex:1">${esc(c.name)}</span>
+          ${c.title?`<span style="font-size:11px;color:var(--muted)">${esc(c.title)}</span>`:''}
+          ${c.linkedIn?`<a href="${esc(c.linkedIn)}" target="_blank" onclick="event.stopPropagation()" class="li-btn" style="width:24px;height:24px;font-size:11px">in</a>`:''}
+        </div>`).join('')}
+    </div>
+  </div>`:
+  `<div class="vf"><div class="vl">Connections</div><p style="font-size:12.5px;color:var(--muted)">No saved connections at this company yet.</p></div>`;
+
+  const appsHtml=apps.length?`<div class="vf">
+    <div class="vl">Applications (${apps.length})</div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      ${apps.map(a=>`
+        <div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border);cursor:pointer"
+             onclick="closeModal('view-modal');openViewModal('${a.id}')">
+          <span class="sb s-${a.status}" style="font-size:9.5px">${SLABELS[a.status]||a.status}</span>
+          <span style="font-size:13px;font-weight:500;flex:1">${esc(a.role)}</span>
+          <span style="font-size:10.5px;color:var(--muted);font-family:var(--font-mono)">${a.date||''}</span>
+        </div>`).join('')}
+    </div>
+  </div>`:'';
+
+  const editBtn=S.isOwner?`<button class="btn btn-sm" onclick="closeModal('view-modal');openEditTcModal('${t.id}')">✏️ Edit</button>`:'';
+
+  document.getElementById('view-modal-content').innerHTML=`
+    <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:1.25rem">
+      <div class="tc-av" style="width:46px;height:46px;font-size:16px;background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--font-display);font-size:1.15rem;font-weight:500">${esc(t.name)}</div>
+        ${t.url?`<a href="${esc(t.url)}" target="_blank" style="font-size:12px;color:var(--accent4)">${esc(t.url.replace(/^https?:\/\//,'').replace(/\/$/,''))} ↗</a>`:''}
+      </div>
+      <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(255,215,0,.12);color:#f0d060;border:1px solid rgba(255,215,0,.25)">⭐ Target</span>
+    </div>
+    ${t.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(t.notes)}</div></div>`:''}
+    ${connsHtml}
+    ${appsHtml}
+    <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end">
+      ${editBtn}
+      <button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button>
+    </div>`;
+  openModal('view-modal');
 }
 
 function openAddTcModal(){
