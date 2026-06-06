@@ -1537,7 +1537,6 @@ function buildTcCard(t){
       <div class="tc-av" style="background:${col}1a;color:${col};border:1.5px solid ${col}33">${in_}</div>
       <div class="tc-info">
         <div class="tc-name">${esc(t.name)}</div>
-        ${t.url?`<div class="tc-url">${esc(t.url.replace(/^https?:\/\//,'').replace(/\/$/,''))}</div>`:''}
       </div>
       ${t.url?`<a href="${esc(t.url)}" target="_blank" onclick="event.stopPropagation()" class="li-btn" title="Open website" style="font-size:13px">↗</a>`:''}
     </div>
