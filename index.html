@@ -1468,14 +1468,14 @@ async function saveConnection(){
   if(S.editingCId){const i=S.connections.findIndex(x=>x.id===S.editingCId);if(i>=0)S.connections[i]=conn;else S.connections.push(conn);}
   else S.connections.unshift(conn);
   const ok=await save();
-  if(ok){closeModal('conn-modal');renderConnections();updateBadges();renderCards();toast(S.editingCId?'Connection updated!':'Connection saved! 🔗','success');}
+  if(ok){closeModal('conn-modal');renderConnections();updateBadges();renderCards();renderTargets();renderCompanyPanel();toast(S.editingCId?'Connection updated!':'Connection saved! 🔗','success');}
   else if(!S.editingCId)S.connections.shift();
 }
 async function deleteConn(id){
   if(!S.isOwner){toast('Read-only mode','error');return;}
   if(!confirm('Delete connection?'))return;
   S.connections=S.connections.filter(c=>c.id!==id);
-  if(await save()){renderConnections();updateBadges();renderCards();toast('Deleted','success');}
+  if(await save()){renderConnections();updateBadges();renderCards();renderTargets();renderCompanyPanel();toast('Deleted','success');}
 }
 
 // ── TARGET COMPANIES ──────────────────────────────────────────────
@@ -1616,14 +1616,14 @@ async function saveTarget(){
   if(S.editingTCId){const i=S.targetCompanies.findIndex(x=>x.id===S.editingTCId);if(i>=0)S.targetCompanies[i]=tc;else S.targetCompanies.push(tc);}
   else S.targetCompanies.unshift(tc);
   const ok=await save();
-  if(ok){closeModal('tc-modal');renderTargets();updateBadges();renderCards();toast(S.editingTCId?'Target updated!':'Target company added! ⭐','success');}
+  if(ok){closeModal('tc-modal');renderTargets();updateBadges();renderCards();renderCompanyPanel();toast(S.editingTCId?'Target updated!':'Target company added! ⭐','success');}
   else if(!S.editingTCId)S.targetCompanies.shift();
 }
 async function deleteTc(id){
   if(!S.isOwner){toast('Read-only mode','error');return;}
   if(!confirm('Remove this target company?'))return;
   S.targetCompanies=S.targetCompanies.filter(t=>t.id!==id);
-  if(await save()){renderTargets();updateBadges();renderCards();toast('Removed','success');}
+  if(await save()){renderTargets();updateBadges();renderCards();renderCompanyPanel();toast('Removed','success');}
 }
 
 // ── VIEW MODALS ───────────────────────────────────────────────────
