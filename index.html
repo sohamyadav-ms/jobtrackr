@@ -710,6 +710,13 @@ a{color:inherit;text-decoration:none;}
           <div id="cl-drop-inner"><div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Optional — stored on GitHub Gists</div></div>
         </div>
       </div>
+      <div class="fg full">
+        <label class="fl">Job Description <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— optional &nbsp;·&nbsp; PDF, TXT, DOC, DOCX</span></label>
+        <div class="cv-drop" id="jd-drop" ondragover="handleDrag(event,'jd',true)" ondragleave="handleDrag(event,'jd',false)" ondrop="handleDrop(event,'jd')">
+          <input type="file" accept=".pdf,.txt,.doc,.docx,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" id="jd-file" onchange="handleFileSelect(event,'jd')"/>
+          <div id="jd-drop-inner"><div class="cv-label">Drop file here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Optional — stored on GitHub Gists</div></div>
+        </div>
+      </div>
       <div class="fg full"><label class="fl">Notes</label><textarea id="f-notes" class="ft" placeholder="Referral, salary, next steps…"></textarea></div>
     </div>
     <div class="fa">
@@ -774,6 +781,7 @@ let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],is
   editingId:null,editingCId:null,editingTCId:null,
   cvB64:null,cvName:null,
   clB64:null,clName:null,
+  jdB64:null,jdName:null,
   filter:'all',page:'applications',companyFilter:'all'};
 const COLORS=['#c8f05a','#5af0b8','#f0805a','#5a9ef0','#f05ab8','#f0d85a','#a05af0','#5af050','#f0c05a','#5af0d0'];
 const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
@@ -1091,6 +1099,7 @@ function buildCard(a){
   const linked=getLinked(a.company);
   const hasCv=a.cvName||a.cvGistId||a.cvBinId||a.cvBase64;
   const hasCl=a.clName||a.clGistId;
+  const hasJd=a.jdName||a.jdGistId;
 
   // Target company star badge
   const isTarget=S.targetCompanies.some(t=>(t.name||'').trim().toLowerCase()===(a.company||'').trim().toLowerCase());
@@ -1125,6 +1134,7 @@ function buildCard(a){
     a.jobUrl?`<span class="mc"><a href="${esc(a.jobUrl)}" target="_blank" onclick="event.stopPropagation()">💼 Job Post</a></span>`:'',
     hasCv?`<span class="mc cv-chip" onclick="event.stopPropagation();viewCv('${a.id}')">📄 ${esc((a.cvName||'CV').length>16?(a.cvName||'CV').slice(0,14)+'…':(a.cvName||'CV'))}</span>`:'',
     hasCl?`<span class="mc cv-chip" onclick="event.stopPropagation();viewCl('${a.id}')">📝 ${esc((a.clName||'Cover Letter').length>16?(a.clName||'Cover Letter').slice(0,14)+'…':(a.clName||'Cover Letter'))}</span>`:'',
+    hasJd?`<span class="mc cv-chip" onclick="event.stopPropagation();viewJd('${a.id}')">📋 ${esc((a.jdName||'Job Desc').length>16?(a.jdName||'Job Desc').slice(0,14)+'…':(a.jdName||'Job Desc'))}</span>`:'',
     ...(a.contacts||[]).map(c=>c.linkedIn
       ?`<span class="mc"><a href="${esc(c.linkedIn)}" target="_blank" onclick="event.stopPropagation()">👤 ${esc(c.name)}</a></span>`
       :`<span class="mc">👤 ${esc(c.name)}</span>`),
@@ -1234,7 +1244,7 @@ function getContactRows(){
 // ── MODALS: ADD/EDIT APP ──────────────────────────────────────────
 function openAddModal(){
   if(!S.isOwner)return;
-  S.editingId=null;S.cvB64=null;S.cvName=null;S.clB64=null;S.clName=null;
+  S.editingId=null;S.cvB64=null;S.cvName=null;S.clB64=null;S.clName=null;S.jdB64=null;S.jdName=null;
   document.getElementById('modal-title').textContent='New Application';
   ['f-company','f-role','f-url','f-job-url','f-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-date').value=today();
@@ -1242,6 +1252,7 @@ function openAddModal(){
   document.getElementById('f-followup').value=addDays(today(),14);
   document.getElementById('cv-drop-inner').innerHTML=`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Stored on GitHub Gists — no size limit</div>`;
   document.getElementById('cl-drop-inner').innerHTML=`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Optional — stored on GitHub Gists</div>`;
+  document.getElementById('jd-drop-inner').innerHTML=`<div class="cv-label">Drop file here or <strong>click to browse</strong></div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">Optional — stored on GitHub Gists</div>`;
   document.getElementById('contact-rows').innerHTML='';
   document.getElementById('linked-preview').innerHTML='';
   syncFollowUpVisibility();
@@ -1250,7 +1261,7 @@ function openAddModal(){
 function openEditModal(id){
   if(!S.isOwner)return;
   const a=S.apps.find(x=>x.id===id);if(!a)return;
-  S.editingId=id;S.cvB64=null;S.cvName=null;S.clB64=null;S.clName=null;
+  S.editingId=id;S.cvB64=null;S.cvName=null;S.clB64=null;S.clName=null;S.jdB64=null;S.jdName=null;
   document.getElementById('modal-title').textContent='Edit Application';
   document.getElementById('f-company').value=a.company||'';
   document.getElementById('f-role').value=a.role||'';
@@ -1268,6 +1279,9 @@ function openEditModal(id){
   document.getElementById('cl-drop-inner').innerHTML=(a.clName||a.clGistId)
     ?`<div class="cv-ok">📝 ${esc(a.clName||'Cover Letter on file')} <span style="opacity:.6">(pick new to replace)</span></div>`
     :`<div class="cv-label">Drop PDF here or <strong>click to browse</strong></div>`;
+  document.getElementById('jd-drop-inner').innerHTML=(a.jdName||a.jdGistId)
+    ?`<div class="cv-ok">📋 ${esc(a.jdName||'Job Description on file')} <span style="opacity:.6">(pick new to replace)</span></div>`
+    :`<div class="cv-label">Drop file here or <strong>click to browse</strong></div>`;
   // load contacts
   document.getElementById('contact-rows').innerHTML='';
   (a.contacts||[]).forEach(c=>addContactRow(c));
@@ -1372,6 +1386,8 @@ async function saveApplication(){
     let cvName=S.cvName||(S.editingId?S.apps.find(a=>a.id===S.editingId)?.cvName:null);
     let clGistId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.clGistId||null):null;
     let clName=S.clName||(S.editingId?S.apps.find(a=>a.id===S.editingId)?.clName:null);
+    let jdGistId=S.editingId?(S.apps.find(a=>a.id===S.editingId)?.jdGistId||null):null;
+    let jdName=S.jdName||(S.editingId?S.apps.find(a=>a.id===S.editingId)?.jdName:null);
     if(S.cvB64){
       btn.textContent='Uploading CV…';
       const gid=await uploadGist(S.cvB64,S.cvName,'CV');
@@ -1386,6 +1402,13 @@ async function saveApplication(){
       clGistId=gid;clName=S.clName;
       btn.textContent='Saving…';
     }
+    if(S.jdB64){
+      btn.textContent='Uploading Job Description…';
+      const gid=await uploadGist(S.jdB64,S.jdName,'JobDescription');
+      if(!gid){btn.textContent='Save Application';btn.disabled=false;return;}
+      jdGistId=gid;jdName=S.jdName;
+      btn.textContent='Saving…';
+    }
     const existing=S.editingId?S.apps.find(a=>a.id===S.editingId):null;
     const app={
       id:S.editingId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
@@ -1398,6 +1421,7 @@ async function saveApplication(){
       contacts:getContactRows(),
       cvGistId,cvBinId,cvName,
       clGistId,clName,
+      jdGistId,jdName,
       followUpDate:document.getElementById('f-followup').value||null,
       followUpLog:existing?.followUpLog||[],
       followUpAlert:existing?.followUpAlert||false,
@@ -1661,6 +1685,7 @@ function openViewModal(id){
   const lcHtml=linked.length?`<div class="vf"><div class="vl">Linked Connections</div><div style="display:flex;flex-wrap:wrap;gap:5px">${linked.map(c=>`<span class="cc" onclick="closeModal('view-modal');openViewConn('${c.id}')">🔗 ${esc(c.name)}${c.title?` · ${esc(c.title)}`:''}</span>`).join('')}</div></div>`:'';
   const cvHtml=(a.cvGistId||a.cvBinId||a.cvBase64)?`<div class="vf"><div class="vl">CV Used</div><button class="btn btn-sm" onclick="viewCv('${a.id}')">📄 Open ${esc(a.cvName||'CV')} ↗</button></div>`:'';
   const clHtml=a.clGistId?`<div class="vf"><div class="vl">Cover Letter</div><button class="btn btn-sm" onclick="viewCl('${a.id}')">📝 Open ${esc(a.clName||'Cover Letter')} ↗</button></div>`:'';
+  const jdHtml=a.jdGistId?`<div class="vf"><div class="vl">Job Description</div><button class="btn btn-sm" onclick="viewJd('${a.id}')">📋 Open ${esc(a.jdName||'Job Description')} ↗</button></div>`:'';
   const editBtn=S.isOwner?`<button class="btn btn-sm" onclick="closeModal('view-modal');openEditModal('${a.id}')">✏️ Edit</button>`:'';
   document.getElementById('view-modal-content').innerHTML=`
     <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
@@ -1686,7 +1711,7 @@ function openViewModal(id){
           ${c.contact?`<span style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">${esc(c.contact)}</span>`:''}
         </div>`).join('')}</div></div>`:''
     })()}
-    ${lcHtml}${cvHtml}${clHtml}
+    ${lcHtml}${cvHtml}${clHtml}${jdHtml}
     ${a.notes?`<div class="vf"><div class="vl">Notes</div><div class="vnotes">${esc(a.notes)}</div></div>`:''}
     ${(()=>{
       if(a.status!=='applied')return'';
@@ -1734,6 +1759,33 @@ async function viewCl(id){
   if(a.clGistId){toast('Loading Cover Letter…','success');const b=await fetchGist(a.clGistId);if(!b){toast('Could not load Cover Letter','error');return;}openPdf(b);return;}
   toast('No Cover Letter stored','error');
 }
+async function viewJd(id){
+  const a=S.apps.find(x=>x.id===id);if(!a)return;
+  if(a.jdGistId){
+    toast('Loading Job Description…','success');
+    const b=await fetchGist(a.jdGistId);
+    if(!b){toast('Could not load Job Description','error');return;}
+    openFile(b,a.jdName||'job-description');
+    return;
+  }
+  toast('No Job Description stored','error');
+}
+function openFile(b64,name='file'){
+  try{
+    const bin=atob(b64);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    const ext=(name.split('.').pop()||'').toLowerCase();
+    const mimeMap={pdf:'application/pdf',txt:'text/plain',doc:'application/msword',
+      docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
+    const mime=mimeMap[ext]||'application/octet-stream';
+    const blob=new Blob([bytes],{type:mime});
+    const url=URL.createObjectURL(blob);
+    // For PDF open inline; for others trigger download
+    if(ext==='pdf'){window.open(url,'_blank');}
+    else{const a=document.createElement('a');a.href=url;a.download=name;a.click();}
+  }catch(e){toast('Could not open file','error');}
+}
 function openPdf(b64){
   try{const bin=atob(b64);const b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);window.open(URL.createObjectURL(new Blob([b],{type:'application/pdf'})),'_blank');}
   catch(e){toast('Could not open PDF','error');}
@@ -1759,17 +1811,29 @@ function handleFileSelect(e,type='cv'){loadFile(e.target.files[0],type);}
 function handleDrop(e,type='cv'){e.preventDefault();handleDrag(e,type,false);loadFile(e.dataTransfer.files[0],type);}
 function handleDrag(e,type,on){
   e.preventDefault();
-  const el=document.getElementById(type==='cl'?'cl-drop':'cv-drop');
+  const idMap={cv:'cv-drop',cl:'cl-drop',jd:'jd-drop'};
+  const el=document.getElementById(idMap[type]||'cv-drop');
   if(el)el.classList.toggle('drag',on);
 }
 function loadFile(file,type='cv'){
-  if(!file||file.type!=='application/pdf'){toast('Please select a PDF','error');return;}
+  if(!file){toast('No file selected','error');return;}
+  const allowedJd=['application/pdf','text/plain','application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if(type==='jd'&&!allowedJd.includes(file.type)&&!file.name.match(/\.(pdf|txt|doc|docx)$/i)){
+    toast('Please select a PDF, TXT, DOC or DOCX file','error');return;
+  }
+  if((type==='cv'||type==='cl')&&file.type!=='application/pdf'){
+    toast('Please select a PDF','error');return;
+  }
   const r=new FileReader();
   r.onload=ev=>{
     const b64=ev.target.result.split(',')[1];
     if(type==='cl'){
       S.clB64=b64;S.clName=file.name;
       document.getElementById('cl-drop-inner').innerHTML=`<div class="cv-ok">📝 ${esc(file.name)} <span style="opacity:.6">(${(file.size/1024).toFixed(0)}KB)</span></div>`;
+    } else if(type==='jd'){
+      S.jdB64=b64;S.jdName=file.name;
+      document.getElementById('jd-drop-inner').innerHTML=`<div class="cv-ok">📋 ${esc(file.name)} <span style="opacity:.6">(${(file.size/1024).toFixed(0)}KB)</span></div>`;
     } else {
       S.cvB64=b64;S.cvName=file.name;
       document.getElementById('cv-drop-inner').innerHTML=`<div class="cv-ok">📄 ${esc(file.name)} <span style="opacity:.6">(${(file.size/1024).toFixed(0)}KB)</span></div>`;
