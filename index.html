@@ -984,9 +984,6 @@ function renderCompanyPanel(){
   const panel=document.getElementById('company-panel');
   const list=document.getElementById('cp-list');
 
-  // Agencies page has no company filter (standalone)
-  if(S.page==='agencies'){panel.classList.add('hidden');return;}
-
   let companies=[];
   if(S.page==='applications'){
     const map={};
@@ -1011,6 +1008,13 @@ function renderCompanyPanel(){
       count:S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(t.name||'').trim().toLowerCase()).length
            +S.connections.filter(c=>(c.company||'').trim().toLowerCase()===(t.name||'').trim().toLowerCase()).length,
     })).sort((a,b)=>a.name.localeCompare(b.name));
+  } else if(S.page==='agencies'){
+    // one entry per agency; count = number of consultants
+    companies=S.agencies.map(a=>({
+      name:a.name,
+      color:aColor(a.name),
+      count:(a.consultants||[]).length,
+    })).sort((a,b)=>a.name.localeCompare(b.name));
   }
 
   if(companies.length===0){
@@ -1021,7 +1025,8 @@ function renderCompanyPanel(){
 
   const totalCount=S.page==='applications'?S.apps.length
     :S.page==='connections'?S.connections.length
-    :S.targetCompanies.length;
+    :S.page==='targets'?S.targetCompanies.length
+    :S.agencies.length;
   list.innerHTML=`
     <div class="cp-item${S.companyFilter==='all'?' active':''}" data-co="all">
       <div class="cp-item-dot" style="background:var(--muted)"></div>
@@ -1047,6 +1052,7 @@ function setCompanyFilter(co){
   if(S.page==='applications') renderCards();
   else if(S.page==='connections') renderConnections();
   else if(S.page==='targets') renderTargets();
+  else if(S.page==='agencies') renderAgencies();
 }
 function updateBadges(){
   document.getElementById('apps-count').textContent=S.apps.length;
@@ -1703,8 +1709,10 @@ async function deleteTc(id){
 function renderAgencies(){
   const q=(document.getElementById('ra-search')?.value||'').toLowerCase();
   const list=S.agencies.filter(a=>{
-    if(!q)return true;
-    if((a.name||'').toLowerCase().includes(q))return true;
+    const mc=S.companyFilter==='all'||(a.name||'')===S.companyFilter;
+    if(!mc) return false;
+    if(!q) return true;
+    if((a.name||'').toLowerCase().includes(q)) return true;
     return (a.consultants||[]).some(c=>(c.name||'').toLowerCase().includes(q));
   }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const area=document.getElementById('ra-area');
@@ -1796,14 +1804,14 @@ async function saveAgency(){
   if(S.editingRAId){const i=S.agencies.findIndex(x=>x.id===S.editingRAId);if(i>=0)S.agencies[i]=ag;else S.agencies.push(ag);}
   else S.agencies.unshift(ag);
   const ok=await save();
-  if(ok){closeModal('ra-modal');renderAgencies();updateBadges();toast(S.editingRAId?'Agency updated!':'Agency added! 🏢','success');}
+  if(ok){closeModal('ra-modal');renderAgencies();updateBadges();renderCompanyPanel();toast(S.editingRAId?'Agency updated!':'Agency added! 🏢','success');}
   else if(!S.editingRAId)S.agencies.shift();
 }
 async function deleteAgency(id){
   if(!S.isOwner){toast('Read-only mode','error');return;}
   if(!confirm('Remove this recruitment agency?'))return;
   S.agencies=S.agencies.filter(a=>a.id!==id);
-  if(await save()){renderAgencies();updateBadges();toast('Removed','success');}
+  if(await save()){renderAgencies();updateBadges();renderCompanyPanel();toast('Removed','success');}
 }
 
 function openViewAgency(id){
