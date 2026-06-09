@@ -969,7 +969,14 @@ async function load(){
     const h={'Accept':'application/vnd.github+json'};
     if(S.ghToken)h['Authorization']=`token ${S.ghToken}`;
     const r=await fetchT(`${GH}/gists/${S.dataGistId}`,{headers:h});
-    if(!r.ok){const e=await r.json().catch(()=>({}));toast(e.message||'Load failed','error');return false;}
+    if(!r.ok){
+      const e=await r.json().catch(()=>({}));
+      let msg=e.message||'Load failed';
+      if(r.status===404)msg=`Gist not found — check the Gist ID is correct and your token has access to it (status 404)`;
+      else if(r.status===401)msg=`Token rejected — it may be expired, revoked, or lack "gist" scope (status 401)`;
+      else if(r.status===403)msg=`Access forbidden — token may lack "gist" scope (status 403)`;
+      toast(msg,'error');return false;
+    }
     const d=await r.json();
     const fk=Object.keys(d.files)[0];
     const f=d.files[fk];
@@ -980,7 +987,8 @@ async function load(){
     S.apps=rec.apps||[];S.connections=rec.connections||[];S.targetCompanies=rec.targetCompanies||[];S.agencies=rec.agencies||[];
     return true;
   }catch(e){
-    toast(e.name==='AbortError'?'Request timed out':'Load failed: '+e.message,'error');
+    toast(e.name==='AbortError'?'Request timed out — check your internet connection':'Load failed: '+e.message,'error');
+    console.error('JobTrackr load error:',e);
     return false;
   }
 }
@@ -2193,9 +2201,19 @@ function loadFile(file,type='cv'){
 async function saveApiKey(){
   const gh=document.getElementById('gh-token-input').value.trim();
   if(!gh){toast('Enter your GitHub token','error');return;}
+  if(!gh.startsWith('ghp_')&&!gh.startsWith('github_pat_')){
+    toast('Token should start with "ghp_" or "github_pat_". Make sure you copied a classic personal-access token with "gist" scope.','error');return;
+  }
   const btn=document.querySelector('#setup-screen .btn-p');
-  btn.textContent='Creating Gist…';btn.disabled=true;
+  btn.textContent='Verifying token…';btn.disabled=true;
   try{
+    // pre-flight: verify the token has gist scope BEFORE creating anything
+    const ping=await fetchT(`${GH}/user`,{headers:{'Authorization':`token ${gh}`,'Accept':'application/vnd.github+json'}});
+    if(ping.status===401)throw new Error('Token rejected by GitHub (401). It may be expired, revoked, or copied incorrectly. Generate a fresh token.');
+    if(!ping.ok){const e=await ping.json().catch(()=>({}));throw new Error(`GitHub auth failed (${ping.status}): ${e.message||'Unknown error'}`);}
+    const scopes=(ping.headers.get('x-oauth-scopes')||'').toLowerCase();
+    if(scopes&&!scopes.includes('gist'))throw new Error('Token is missing the "gist" scope. Re-create the token on GitHub with "gist" ticked.');
+    btn.textContent='Creating Gist…';
     const gistId=await createDataGist(gh);
     S.ghToken=gh;S.dataGistId=gistId;S.isOwner=true;
     S.apps=[];S.connections=[];S.targetCompanies=[];S.agencies=[];
@@ -2204,7 +2222,9 @@ async function saveApiKey(){
     document.getElementById('setup-screen').classList.remove('open');
     go();toast('Connected! 100% free, powered by GitHub 🎉','success');
   }catch(e){
-    toast(e.message||'Setup failed — check your token','error');
+    const msg=e.name==='AbortError'?'Request timed out — check your internet connection':e.message||'Setup failed — check your token';
+    toast(msg,'error');
+    console.error('JobTrackr setup error:',e);
   }finally{btn.textContent='Connect & Start Tracking →';btn.disabled=false;}
 }
 
@@ -2219,6 +2239,9 @@ async function loadExistingBin(){
     localStorage.setItem('jt_gist',gid);
     document.getElementById('setup-screen').classList.remove('open');
     go();toast('Data restored!','success');
+  } else {
+    // load() already toasted the specific error; reset state so user can try again
+    S.ghToken=null;S.dataGistId=null;S.isOwner=false;
   }
 }
 
@@ -2265,7 +2288,8 @@ function exportData(){
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();
 }
 function clearLocal(){
-  if(!confirm('Disconnect this device? Your Gist data stays safe on GitHub.'))return;
+  const gid=S.dataGistId||localStorage.getItem('jt_gist')||'(unknown)';
+  if(!confirm(`Disconnect this device?\n\nYour data Gist stays safe on GitHub. To reconnect later, you'll need:\n  • Your GitHub token\n  • Your Gist ID: ${gid}\n\nSave the Gist ID somewhere safe before disconnecting!`))return;
   ['jt_gh','jt_gist','jt_key','jt_bin'].forEach(k=>localStorage.removeItem(k));
   location.reload();
 }
