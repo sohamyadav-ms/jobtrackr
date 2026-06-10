@@ -220,6 +220,80 @@ a{color:inherit;text-decoration:none;}
 .view-opt.active{background:var(--accent-dim);color:var(--accent);font-weight:500;}
 .view-opt.active::after{content:'✓';font-size:11px;opacity:.7;}
 .view-divider{height:1px;background:var(--border);margin:4px 0;}
+
+/* VIEW MODE TOGGLE (cards / list) */
+.vm-toggle{
+  display:inline-flex;background:var(--surface);border:1px solid var(--border2);
+  border-radius:7px;overflow:hidden;flex-shrink:0;
+}
+.vm-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;background:transparent;border:none;cursor:pointer;
+  color:var(--muted);transition:all .15s;font-family:inherit;padding:0;
+}
+.vm-btn:hover{background:var(--surface3);color:var(--text);}
+.vm-btn.active{background:var(--accent-dim);color:var(--accent);}
+.vm-btn svg{width:15px;height:15px;}
+
+/* LIST VIEW (table-like rows) */
+.list-view{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;box-shadow:var(--shadow);
+}
+.list-head{
+  display:grid;align-items:center;gap:12px;padding:11px 16px;
+  background:var(--surface3);border-bottom:1px solid var(--border);
+  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);
+}
+.list-row{
+  display:grid;align-items:center;gap:12px;padding:11px 16px;
+  border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .12s;position:relative;
+}
+.list-row:last-child{border-bottom:none;}
+.list-row:hover{background:var(--surface2);}
+.list-row.fu-alert{background:rgba(240,185,50,.05);}
+.list-row.fu-alert:hover{background:rgba(240,185,50,.10);}
+.list-cell{
+  font-size:12.5px;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+}
+.list-cell-mono{font-family:var(--font-mono);font-size:11.5px;color:var(--text2);}
+.list-cell-name{font-weight:600;color:var(--accent4);}
+.list-cell-muted{color:var(--muted);font-size:11.5px;}
+.list-actions{
+  display:flex;gap:4px;justify-content:flex-end;opacity:0;transition:opacity .15s;
+}
+.list-row:hover .list-actions{opacity:1;}
+.list-actions .btn{padding:4px 7px;font-size:11px;}
+.list-link{color:var(--accent4);text-decoration:none;font-size:11.5px;}
+.list-link:hover{text-decoration:underline;}
+
+/* List grid templates — per page */
+.list-apps .list-head, .list-apps .list-row{
+  grid-template-columns:90px minmax(120px,1.4fr) minmax(110px,1.2fr) 95px 100px minmax(95px,110px) 80px;
+}
+.list-conn .list-head, .list-conn .list-row{
+  grid-template-columns:minmax(140px,1.4fr) minmax(130px,1.3fr) minmax(140px,1.4fr) 90px 80px;
+}
+.list-tc .list-head, .list-tc .list-row{
+  grid-template-columns:minmax(160px,1.5fr) minmax(180px,2fr) 90px 80px;
+}
+.list-ra .list-head, .list-ra .list-row{
+  grid-template-columns:minmax(160px,1.5fr) minmax(180px,2fr) 80px;
+}
+
+@media(max-width:680px){
+  .list-head{display:none;}
+  .list-apps .list-row,
+  .list-conn .list-row,
+  .list-tc .list-row,
+  .list-ra .list-row{
+    grid-template-columns:1fr;gap:4px;padding:12px 14px;
+  }
+  .list-actions{opacity:1;justify-content:flex-start;margin-top:4px;}
+}
 .pill{
   font-size:11px;font-weight:500;padding:3px 11px;border-radius:20px;
   border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;
@@ -693,7 +767,15 @@ a{color:inherit;text-decoration:none;}
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="search-input" placeholder="Search company or role…" oninput="renderCards()"></div>
           <div class="pills" id="filter-pills"></div>
-          <div class="view-wrap" style="margin-left:auto">
+          <div class="vm-toggle" style="margin-left:auto" title="View mode">
+            <button class="vm-btn active" id="vm-cards-applications" onclick="setViewMode('applications','cards')" title="Card view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-list-applications" onclick="setViewMode('applications','list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="3.5" x2="14" y2="3.5"/><line x1="5" y1="8" x2="14" y2="8"/><line x1="5" y1="12.5" x2="14" y2="12.5"/><circle cx="2.5" cy="3.5" r=".8" fill="currentColor"/><circle cx="2.5" cy="8" r=".8" fill="currentColor"/><circle cx="2.5" cy="12.5" r=".8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="view-wrap">
             <button class="view-btn" id="view-btn-applications" onclick="toggleViewMenu('applications')">👁 View<span class="view-caret">▾</span></button>
             <div class="view-menu" id="view-menu-applications"></div>
           </div>
@@ -706,7 +788,15 @@ a{color:inherit;text-decoration:none;}
       <div class="page" id="page-connections">
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="conn-search" placeholder="Search name or company…" oninput="renderConnections()"></div>
-          <div class="view-wrap" style="margin-left:auto">
+          <div class="vm-toggle" style="margin-left:auto" title="View mode">
+            <button class="vm-btn active" id="vm-cards-connections" onclick="setViewMode('connections','cards')" title="Card view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-list-connections" onclick="setViewMode('connections','list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="3.5" x2="14" y2="3.5"/><line x1="5" y1="8" x2="14" y2="8"/><line x1="5" y1="12.5" x2="14" y2="12.5"/><circle cx="2.5" cy="3.5" r=".8" fill="currentColor"/><circle cx="2.5" cy="8" r=".8" fill="currentColor"/><circle cx="2.5" cy="12.5" r=".8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="view-wrap">
             <button class="view-btn" id="view-btn-connections" onclick="toggleViewMenu('connections')">👁 View<span class="view-caret">▾</span></button>
             <div class="view-menu" id="view-menu-connections"></div>
           </div>
@@ -719,7 +809,15 @@ a{color:inherit;text-decoration:none;}
       <div class="page" id="page-targets">
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="tc-search" placeholder="Search company…" oninput="renderTargets()"></div>
-          <div class="view-wrap" style="margin-left:auto">
+          <div class="vm-toggle" style="margin-left:auto" title="View mode">
+            <button class="vm-btn active" id="vm-cards-targets" onclick="setViewMode('targets','cards')" title="Card view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-list-targets" onclick="setViewMode('targets','list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="3.5" x2="14" y2="3.5"/><line x1="5" y1="8" x2="14" y2="8"/><line x1="5" y1="12.5" x2="14" y2="12.5"/><circle cx="2.5" cy="3.5" r=".8" fill="currentColor"/><circle cx="2.5" cy="8" r=".8" fill="currentColor"/><circle cx="2.5" cy="12.5" r=".8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="view-wrap">
             <button class="view-btn" id="view-btn-targets" onclick="toggleViewMenu('targets')">👁 View<span class="view-caret">▾</span></button>
             <div class="view-menu" id="view-menu-targets"></div>
           </div>
@@ -732,7 +830,15 @@ a{color:inherit;text-decoration:none;}
       <div class="page" id="page-agencies">
         <div class="toolbar">
           <div class="sw"><span class="s-ic">🔍</span><input type="text" id="ra-search" placeholder="Search agency or consultant…" oninput="renderAgencies()"></div>
-          <div class="view-wrap" style="margin-left:auto">
+          <div class="vm-toggle" style="margin-left:auto" title="View mode">
+            <button class="vm-btn active" id="vm-cards-agencies" onclick="setViewMode('agencies','cards')" title="Card view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-list-agencies" onclick="setViewMode('agencies','list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="3.5" x2="14" y2="3.5"/><line x1="5" y1="8" x2="14" y2="8"/><line x1="5" y1="12.5" x2="14" y2="12.5"/><circle cx="2.5" cy="3.5" r=".8" fill="currentColor"/><circle cx="2.5" cy="8" r=".8" fill="currentColor"/><circle cx="2.5" cy="12.5" r=".8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="view-wrap">
             <button class="view-btn" id="view-btn-agencies" onclick="toggleViewMenu('agencies')">👁 View<span class="view-caret">▾</span></button>
             <div class="view-menu" id="view-menu-agencies"></div>
           </div>
@@ -893,6 +999,12 @@ let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],ag
     connections:{by:'name',dir:'asc'},
     targets:{by:'name',dir:'asc'},
     agencies:{by:'name',dir:'asc'},
+  },
+  viewMode:{
+    applications:'cards',
+    connections:'cards',
+    targets:'cards',
+    agencies:'cards',
   }};
 const COLORS=['#5b8a1f','#1d9c6e','#d2611f','#2563c4','#a3367f','#b87800','#7d28b4','#1f8a5b','#a8501a','#1d4fa1'];
 const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
@@ -1116,6 +1228,18 @@ function updateViewBtnLabel(pageKey){
   btn.innerHTML=`👁 ${byLabel} ${arrow}<span class="view-caret">▾</span>`;
 }
 
+function setViewMode(pageKey,mode){
+  S.viewMode[pageKey]=mode;
+  // toggle active class
+  document.getElementById(`vm-cards-${pageKey}`)?.classList.toggle('active',mode==='cards');
+  document.getElementById(`vm-list-${pageKey}`)?.classList.toggle('active',mode==='list');
+  // re-render
+  if(pageKey==='applications') renderCards();
+  else if(pageKey==='connections') renderConnections();
+  else if(pageKey==='targets') renderTargets();
+  else if(pageKey==='agencies') renderAgencies();
+}
+
 // Close view menus when clicking outside
 document.addEventListener('click',e=>{
   if(!e.target.closest('.view-wrap')){
@@ -1293,7 +1417,42 @@ function renderCards(){
     area.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-t">${S.apps.length?'No matches':'No applications yet'}</div><p class="empty-s">${S.isOwner&&!S.apps.length?'Hit "+ Add" to log your first application.':'Try a different filter.'}</p>${S.isOwner&&!S.apps.length?`<button class="btn btn-p" onclick="openAddModal()" style="margin-top:4px">+ Add First Application</button>`:''}</div>`;
     return;
   }
-  area.innerHTML=`<div class="cards-grid">${apps.map(buildCard).join('')}</div>`;
+  if(S.viewMode.applications==='list'){
+    area.innerHTML=`<div class="list-view list-apps">
+      <div class="list-head">
+        <div>Date</div><div>Company</div><div>Role</div><div>Status</div><div>CV</div><div>Follow-up</div><div></div>
+      </div>
+      ${apps.map(buildAppRow).join('')}
+    </div>`;
+  } else {
+    area.innerHTML=`<div class="cards-grid">${apps.map(buildCard).join('')}</div>`;
+  }
+}
+
+function buildAppRow(a){
+  const ds=a.date?new Date(a.date+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'—';
+  const sc=`s-${a.status}`,lbl=SLABELS[a.status]||a.status;
+  const hasCv=a.cvName||a.cvGistId||a.cvBinId||a.cvBase64;
+  // follow-up
+  const storedFud=a.followUpDate||null;
+  const effectiveFud=storedFud||(a.date&&a.status==='applied'?addDays(a.date,14):null);
+  const isApplied=a.status==='applied';
+  const fst=fuStatus(effectiveFud);
+  const alertOn=a.followUpAlert||(isApplied&&effectiveFud&&effectiveFud<=today());
+  const fudText=(isApplied&&effectiveFud)?fmtDate(effectiveFud):'—';
+  const fudClass=fst==='overdue'?'overdue':fst==='today'?'today':'';
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditModal('${a.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteApp('${a.id}')" title="Delete">🗑</button>`:'';
+  return `<div class="list-row${(alertOn&&isApplied)?' fu-alert':''}" onclick="openViewModal('${a.id}')">
+    <div class="list-cell list-cell-mono">${ds}</div>
+    <div class="list-cell list-cell-name" title="${esc(a.company)}">${esc(a.company)}</div>
+    <div class="list-cell" title="${esc(a.role)}">${esc(a.role)}</div>
+    <div class="list-cell"><span class="sb ${sc}" style="font-size:9.5px">${lbl}</span></div>
+    <div class="list-cell">${hasCv?`<a class="list-link" onclick="event.stopPropagation();viewCv('${a.id}')" style="cursor:pointer">📄 Open</a>`:'<span class="list-cell-muted">—</span>'}</div>
+    <div class="list-cell list-cell-mono ${fudClass==='overdue'?'overdue':fudClass==='today'?'today':''}" style="${fudClass==='overdue'?'color:#f07a3a':fudClass==='today'?'color:#f0b932':''}">${fudText}</div>
+    <div class="list-actions">${editDel}</div>
+  </div>`;
 }
 
 function buildCard(a){
@@ -1378,7 +1537,30 @@ function renderConnections(){
     area.innerHTML=`<div class="empty"><div class="empty-ic">🔗</div><div class="empty-t">No connections yet</div><p class="empty-s">Add LinkedIn contacts here. They auto-link to job apps at the same company.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddConnModal()" style="margin-top:4px">+ Add First Connection</button>`:''}</div>`;
     return;
   }
-  area.innerHTML=`<div class="conn-grid">${list.map(buildConn).join('')}</div>`;
+  if(S.viewMode.connections==='list'){
+    area.innerHTML=`<div class="list-view list-conn">
+      <div class="list-head">
+        <div>Name</div><div>Position</div><div>Company</div><div>Linked Apps</div><div></div>
+      </div>
+      ${list.map(buildConnRow).join('')}
+    </div>`;
+  } else {
+    area.innerHTML=`<div class="conn-grid">${list.map(buildConn).join('')}</div>`;
+  }
+}
+
+function buildConnRow(c){
+  const linked=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===(c.company||'').trim().toLowerCase());
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditConnModal('${c.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteConn('${c.id}')" title="Delete">🗑</button>`:'';
+  return `<div class="list-row" onclick="openViewConn('${c.id}')">
+    <div class="list-cell list-cell-name" title="${esc(c.name)}">${esc(c.name)}</div>
+    <div class="list-cell" title="${esc(c.title||'')}">${esc(c.title||'—')}</div>
+    <div class="list-cell" title="${esc(c.company||'')}">${esc(c.company||'—')}</div>
+    <div class="list-cell list-cell-mono">${linked.length?`🔗 ${linked.length} app${linked.length>1?'s':''}`:'<span class="list-cell-muted">—</span>'}</div>
+    <div class="list-actions">${editDel}</div>
+  </div>`;
 }
 
 function buildConn(c){
@@ -1725,7 +1907,31 @@ function renderTargets(){
     area.innerHTML=`<div class="empty"><div class="empty-ic">⭐</div><div class="empty-t">No target companies yet</div><p class="empty-s">Add dream companies here. Applications to those companies will be starred automatically.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddTcModal()" style="margin-top:4px">⭐ Add First Target</button>`:''}</div>`;
     return;
   }
-  area.innerHTML=`<div class="tc-grid">${list.map(buildTcCard).join('')}</div>`;
+  if(S.viewMode.targets==='list'){
+    area.innerHTML=`<div class="list-view list-tc">
+      <div class="list-head">
+        <div>Company</div><div>Website</div><div>Linked Apps</div><div></div>
+      </div>
+      ${list.map(buildTcRow).join('')}
+    </div>`;
+  } else {
+    area.innerHTML=`<div class="tc-grid">${list.map(buildTcCard).join('')}</div>`;
+  }
+}
+
+function buildTcRow(t){
+  const tName=(t.name||'').trim().toLowerCase();
+  const apps=S.apps.filter(a=>(a.company||'').trim().toLowerCase()===tName);
+  const urlDisplay=t.url?t.url.replace(/^https?:\/\//,'').replace(/\/$/,''):'';
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditTcModal('${t.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteTc('${t.id}')" title="Delete">🗑</button>`:'';
+  return `<div class="list-row" onclick="openViewTarget('${t.id}')">
+    <div class="list-cell list-cell-name" title="${esc(t.name)}">${esc(t.name)}</div>
+    <div class="list-cell" title="${esc(t.url||'')}">${t.url?`<a class="list-link" href="${esc(t.url)}" target="_blank" onclick="event.stopPropagation()">${esc(urlDisplay)} ↗</a>`:'<span class="list-cell-muted">—</span>'}</div>
+    <div class="list-cell list-cell-mono">${apps.length?`📋 ${apps.length} app${apps.length>1?'s':''}`:'<span class="list-cell-muted">—</span>'}</div>
+    <div class="list-actions">${editDel}</div>
+  </div>`;
 }
 
 function buildTcCard(t){
@@ -1871,7 +2077,28 @@ function renderAgencies(){
     area.innerHTML=`<div class="empty"><div class="empty-ic">🏢</div><div class="empty-t">No recruitment agencies yet</div><p class="empty-s">Track recruiters and their consultants here. They'll be visible across devices.</p>${S.isOwner?`<button class="btn btn-p" onclick="openAddRaModal()" style="margin-top:4px">＋ Add First Agency</button>`:''}</div>`;
     return;
   }
-  area.innerHTML=`<div class="tc-grid">${list.map(buildRaCard).join('')}</div>`;
+  if(S.viewMode.agencies==='list'){
+    area.innerHTML=`<div class="list-view list-ra">
+      <div class="list-head">
+        <div>Agency</div><div>Website</div><div></div>
+      </div>
+      ${list.map(buildRaRow).join('')}
+    </div>`;
+  } else {
+    area.innerHTML=`<div class="tc-grid">${list.map(buildRaCard).join('')}</div>`;
+  }
+}
+
+function buildRaRow(a){
+  const urlDisplay=a.url?a.url.replace(/^https?:\/\//,'').replace(/\/$/,''):'';
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditRaModal('${a.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteAgency('${a.id}')" title="Delete">🗑</button>`:'';
+  return `<div class="list-row" onclick="openViewAgency('${a.id}')">
+    <div class="list-cell list-cell-name" title="${esc(a.name)}">${esc(a.name)}</div>
+    <div class="list-cell" title="${esc(a.url||'')}">${a.url?`<a class="list-link" href="${esc(a.url)}" target="_blank" onclick="event.stopPropagation()">${esc(urlDisplay)} ↗</a>`:'<span class="list-cell-muted">—</span>'}</div>
+    <div class="list-actions">${editDel}</div>
+  </div>`;
 }
 
 function buildRaCard(a){
