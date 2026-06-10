@@ -272,7 +272,7 @@ a{color:inherit;text-decoration:none;}
 
 /* List grid templates — per page */
 .list-apps .list-head, .list-apps .list-row{
-  grid-template-columns:90px minmax(120px,1.4fr) minmax(110px,1.2fr) 95px 100px minmax(95px,110px) 80px;
+  grid-template-columns:90px minmax(120px,1.3fr) minmax(110px,1.2fr) 140px 90px minmax(140px,160px) 80px;
 }
 .list-conn .list-head, .list-conn .list-row{
   grid-template-columns:minmax(140px,1.4fr) minmax(130px,1.3fr) minmax(140px,1.4fr) 90px 80px;
@@ -1440,7 +1440,11 @@ function buildAppRow(a){
   const fst=fuStatus(effectiveFud);
   const alertOn=a.followUpAlert||(isApplied&&effectiveFud&&effectiveFud<=today());
   const fudText=(isApplied&&effectiveFud)?fmtDate(effectiveFud):'—';
-  const fudClass=fst==='overdue'?'overdue':fst==='today'?'today':'';
+  const fudColor=fst==='overdue'?'#f07a3a':fst==='today'?'#f0b932':'';
+  const fuToggleHtml=(isApplied&&effectiveFud)?`<label class="fu-toggle" title="${alertOn?'Highlight on':'Highlight off'}" onclick="event.stopPropagation()" style="margin-left:auto">
+      <input type="checkbox" ${alertOn?'checked':''} onchange="toggleFollowUpAlert('${a.id}',this.checked)">
+      <div class="fu-track"><div class="fu-thumb"></div></div>
+    </label>`:'';
   const editDel=S.isOwner?`
     <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditModal('${a.id}')" title="Edit">✏️</button>
     <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteApp('${a.id}')" title="Delete">🗑</button>`:'';
@@ -1450,7 +1454,10 @@ function buildAppRow(a){
     <div class="list-cell" title="${esc(a.role)}">${esc(a.role)}</div>
     <div class="list-cell"><span class="sb ${sc}" style="font-size:9.5px">${lbl}</span></div>
     <div class="list-cell">${hasCv?`<a class="list-link" onclick="event.stopPropagation();viewCv('${a.id}')" style="cursor:pointer">📄 Open</a>`:'<span class="list-cell-muted">—</span>'}</div>
-    <div class="list-cell list-cell-mono ${fudClass==='overdue'?'overdue':fudClass==='today'?'today':''}" style="${fudClass==='overdue'?'color:#f07a3a':fudClass==='today'?'color:#f0b932':''}">${fudText}</div>
+    <div class="list-cell list-cell-mono" style="display:flex;align-items:center;gap:7px;${fudColor?`color:${fudColor}`:''}">
+      <span>${fudText}</span>
+      ${fuToggleHtml}
+    </div>
     <div class="list-actions">${editDel}</div>
   </div>`;
 }
