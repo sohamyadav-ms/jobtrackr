@@ -289,10 +289,59 @@ a{color:inherit;text-decoration:none;}
   .list-apps .list-row,
   .list-conn .list-row,
   .list-tc .list-row,
-  .list-ra .list-row{
+  .list-ra .list-row,
+  .list-lib .list-row{
     grid-template-columns:1fr;gap:4px;padding:12px 14px;
   }
   .list-actions{opacity:1;justify-content:flex-start;margin-top:4px;}
+}
+
+/* LIBRARY */
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.lib-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem 1.1rem;display:flex;flex-direction:column;gap:8px;
+  transition:all .2s;position:relative;cursor:pointer;
+}
+.lib-card:hover{background:var(--surface2);border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow);}
+.lib-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.lib-card-title{font-weight:600;font-size:14px;color:var(--accent4);line-height:1.3;flex:1;min-width:0;}
+.lib-type-badge{
+  font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:10px;
+  white-space:nowrap;flex-shrink:0;
+}
+.lib-type-email{background:rgba(37,99,196,.10);color:#1d4fa1;border:1px solid rgba(37,99,196,.25);}
+.lib-type-prompt{background:rgba(91,138,31,.10);color:#436a13;border:1px solid rgba(91,138,31,.25);}
+.lib-type-note{background:rgba(120,128,140,.10);color:var(--text2);border:1px solid rgba(120,128,140,.25);}
+.lib-subject{font-size:11.5px;color:var(--text2);font-style:italic;}
+.lib-preview{
+  font-size:11.5px;color:var(--text2);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  overflow:hidden;text-overflow:ellipsis;
+  white-space:pre-wrap;word-break:break-word;
+}
+.lib-meta{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);flex-wrap:wrap;}
+.lib-tag{
+  font-size:9.5px;padding:1.5px 6px;border-radius:4px;
+  background:var(--surface3);color:var(--text2);border:1px solid var(--border);
+}
+.lib-actions{
+  display:flex;gap:5px;justify-content:flex-end;padding-top:7px;
+  border-top:1px solid var(--border);opacity:0;transition:opacity .2s;
+}
+.lib-card:hover .lib-actions{opacity:1;}
+.lib-body-view{
+  background:var(--surface2);border:1px solid var(--border);border-radius:7px;
+  padding:12px 14px;font-size:13px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;color:var(--text);
+  font-family:var(--font-body);max-height:400px;overflow-y:auto;
+}
+.lib-var-highlight{
+  background:rgba(91,138,31,.15);color:#436a13;
+  padding:1px 4px;border-radius:3px;font-family:var(--font-mono);font-size:.95em;
+}
+.list-lib .list-head, .list-lib .list-row{
+  grid-template-columns:minmax(160px,1.5fr) 100px minmax(180px,2fr) 90px 80px;
 }
 .pill{
   font-size:11px;font-weight:500;padding:3px 11px;border-radius:20px;
@@ -713,6 +762,9 @@ a{color:inherit;text-decoration:none;}
   <div class="nav" id="nav-ra" onclick="switchPage('agencies')">
     <span class="nav-ic">🏢</span>Recruitment Agencies<span class="nav-badge" id="ra-count">0</span>
   </div>
+  <div class="nav" id="nav-lib" onclick="switchPage('library')">
+    <span class="nav-ic">📚</span>Library<span class="nav-badge" id="lib-count">0</span>
+  </div>
   <div class="sb-div"></div>
   <div class="sb-sec">Quick Add</div>
   <div class="nav" id="nav-add-app" onclick="openAddModal()" style="display:none">
@@ -726,6 +778,9 @@ a{color:inherit;text-decoration:none;}
   </div>
   <div class="nav" id="nav-add-ra" onclick="openAddRaModal()" style="display:none">
     <span class="nav-ic">＋</span>Recruitment Agency
+  </div>
+  <div class="nav" id="nav-add-lib" onclick="openAddLibModal()" style="display:none">
+    <span class="nav-ic">＋</span>Library Item
   </div>
   <div class="sb-bottom">
     <div class="nav" id="share-nav" onclick="copyShareLink()" style="display:none"><span class="nav-ic">↗</span>Share View</div>
@@ -845,6 +900,28 @@ a{color:inherit;text-decoration:none;}
           <button class="btn btn-p btn-sm" id="add-ra-btn" onclick="openAddRaModal()" style="display:none">＋ Add Agency</button>
         </div>
         <div id="ra-area"></div>
+      </div>
+
+      <!-- LIBRARY PAGE -->
+      <div class="page" id="page-library">
+        <div class="toolbar">
+          <div class="sw"><span class="s-ic">🔍</span><input type="text" id="lib-search" placeholder="Search title or content…" oninput="renderLibrary()"></div>
+          <div class="pills" id="lib-filter-pills"></div>
+          <div class="vm-toggle" style="margin-left:auto" title="View mode">
+            <button class="vm-btn active" id="vm-cards-library" onclick="setViewMode('library','cards')" title="Card view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-list-library" onclick="setViewMode('library','list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="3.5" x2="14" y2="3.5"/><line x1="5" y1="8" x2="14" y2="8"/><line x1="5" y1="12.5" x2="14" y2="12.5"/><circle cx="2.5" cy="3.5" r=".8" fill="currentColor"/><circle cx="2.5" cy="8" r=".8" fill="currentColor"/><circle cx="2.5" cy="12.5" r=".8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="view-wrap">
+            <button class="view-btn" id="view-btn-library" onclick="toggleViewMenu('library')">👁 View<span class="view-caret">▾</span></button>
+            <div class="view-menu" id="view-menu-library"></div>
+          </div>
+          <button class="btn btn-p btn-sm" id="add-lib-btn" onclick="openAddLibModal()" style="display:none">＋ Add to Library</button>
+        </div>
+        <div id="lib-area"></div>
       </div>
     </div>
   </div>
@@ -980,6 +1057,43 @@ a{color:inherit;text-decoration:none;}
   </div>
 </div>
 
+<!-- ADD/EDIT LIBRARY ITEM MODAL -->
+<div class="overlay" id="lib-modal">
+  <div class="modal">
+    <button class="mc-btn" onclick="closeModal('lib-modal')">✕</button>
+    <div class="modal-title" id="lib-modal-title">New Library Item</div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Title *</label><input type="text" id="lib-title" class="fi" placeholder="Cold outreach — TestCo"/></div>
+      <div class="fg"><label class="fl">Type *</label>
+        <select id="lib-type" class="fs" onchange="syncLibSubjectVisibility()">
+          <option value="email">📧 Email Draft</option>
+          <option value="prompt">💬 Prompt</option>
+          <option value="note">📝 Note</option>
+        </select>
+      </div>
+      <div class="fg full" id="lib-subject-wrap">
+        <label class="fl">Subject <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— email only</span></label>
+        <input type="text" id="lib-subject" class="fi" placeholder="Interest in QA Automation role at TestCo"/>
+      </div>
+      <div class="fg full">
+        <label class="fl">Body *
+          <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">
+            — variables supported: <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;font-family:var(--font-mono)">{{company}}</code>
+            <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;font-family:var(--font-mono);margin-left:3px">{{role}}</code>
+            <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;font-family:var(--font-mono);margin-left:3px">{{my_name}}</code>
+          </span>
+        </label>
+        <textarea id="lib-body" class="ft" placeholder="Hi {{company}} team,&#10;&#10;I'm interested in the {{role}} position..." style="min-height:180px"></textarea>
+      </div>
+      <div class="fg full"><label class="fl">Tags <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— comma separated</span></label><input type="text" id="lib-tags" class="fi" placeholder="cold-outreach, qa, automation"/></div>
+    </div>
+    <div class="fa">
+      <button class="btn" onclick="closeModal('lib-modal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveLibrary()">Save Item</button>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW MODAL -->
 <div class="overlay" id="view-modal"><div class="modal" id="view-modal-content"></div></div>
 
@@ -988,23 +1102,25 @@ a{color:inherit;text-decoration:none;}
 
 <script>
 const GH='https://api.github.com';
-let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],agencies:[],isOwner:false,
-  editingId:null,editingCId:null,editingTCId:null,editingRAId:null,
+let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],agencies:[],library:[],isOwner:false,
+  editingId:null,editingCId:null,editingTCId:null,editingRAId:null,editingLibId:null,
   cvB64:null,cvName:null,
   clB64:null,clName:null,
   jdB64:null,jdName:null,
-  filter:'all',page:'applications',companyFilter:'all',
+  filter:'all',page:'applications',companyFilter:'all',libFilter:'all',
   sort:{
     applications:{by:'date',dir:'desc'},
     connections:{by:'name',dir:'asc'},
     targets:{by:'name',dir:'asc'},
     agencies:{by:'name',dir:'asc'},
+    library:{by:'date',dir:'desc'},
   },
   viewMode:{
     applications:'cards',
     connections:'cards',
     targets:'cards',
     agencies:'cards',
+    library:'cards',
   }};
 const COLORS=['#5b8a1f','#1d9c6e','#d2611f','#2563c4','#a3367f','#b87800','#7d28b4','#1f8a5b','#a8501a','#1d4fa1'];
 const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
@@ -1054,9 +1170,9 @@ function switchPage(pg){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav[id^="nav-"]').forEach(n=>n.classList.remove('active'));
   document.getElementById(`page-${pg}`).classList.add('active');
-  const navMap={applications:'nav-apps',connections:'nav-conn',targets:'nav-tc',agencies:'nav-ra'};
+  const navMap={applications:'nav-apps',connections:'nav-conn',targets:'nav-tc',agencies:'nav-ra',library:'nav-lib'};
   if(navMap[pg]) document.getElementById(navMap[pg]).classList.add('active');
-  const titleMap={applications:'Applications',connections:'Connections',targets:'Target Companies',agencies:'Recruitment Agencies'};
+  const titleMap={applications:'Applications',connections:'Connections',targets:'Target Companies',agencies:'Recruitment Agencies',library:'Library'};
   document.getElementById('page-title').textContent=titleMap[pg]||pg;
   // Stats bar only on Applications page
   document.getElementById('stats-bar').style.display=pg==='applications'?'block':'none';
@@ -1064,6 +1180,7 @@ function switchPage(pg){
   if(pg==='connections') renderConnections();
   else if(pg==='targets') renderTargets();
   else if(pg==='agencies') renderAgencies();
+  else if(pg==='library') renderLibrary();
   renderCompanyPanel();
 }
 
@@ -1096,7 +1213,7 @@ async function load(){
     if(f.truncated){const raw=await fetchT(f.raw_url);content=await raw.text();}
     else content=f.content;
     const rec=JSON.parse(content);
-    S.apps=rec.apps||[];S.connections=rec.connections||[];S.targetCompanies=rec.targetCompanies||[];S.agencies=rec.agencies||[];
+    S.apps=rec.apps||[];S.connections=rec.connections||[];S.targetCompanies=rec.targetCompanies||[];S.agencies=rec.agencies||[];S.library=rec.library||[];
     return true;
   }catch(e){
     toast(e.name==='AbortError'?'Request timed out — check your internet connection':'Load failed: '+e.message,'error');
@@ -1110,7 +1227,7 @@ async function save(){
   if(!S.isOwner||!S.ghToken||!S.dataGistId)return false;
   try{
     const lean=S.apps.map(({cvBase64,...rest})=>rest);
-    const payload=JSON.stringify({apps:lean,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies},null,2);
+    const payload=JSON.stringify({apps:lean,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies,library:S.library},null,2);
     const r=await fetchT(`${GH}/gists/${S.dataGistId}`,{
       method:'PATCH',
       headers:{'Authorization':`token ${S.ghToken}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
@@ -1132,7 +1249,7 @@ async function createDataGist(token){
     body:JSON.stringify({
       description:'JobTrackr — Job Application Data',
       public:false,
-      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[],targetCompanies:[],agencies:[]},null,2)}}
+      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[],targetCompanies:[],agencies:[],library:[]},null,2)}}
     })
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Failed to create Gist');}
@@ -1143,7 +1260,7 @@ async function createDataGist(token){
 // ── SHOW APP ──────────────────────────────────────────────────────
 function go(){
   document.getElementById('main-area').style.cssText='display:flex;flex-direction:column;';
-  const ownerEls=['write-badge','share-btn','share-nav','nav-add-app','nav-add-conn','nav-add-tc','nav-add-ra','add-app-btn','add-conn-btn','add-tc-btn','add-ra-btn'];
+  const ownerEls=['write-badge','share-btn','share-nav','nav-add-app','nav-add-conn','nav-add-tc','nav-add-ra','nav-add-lib','add-app-btn','add-conn-btn','add-tc-btn','add-ra-btn','add-lib-btn'];
   if(S.isOwner){
     ownerEls.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
   } else {
@@ -1255,6 +1372,9 @@ function renderCompanyPanel(){
   const panel=document.getElementById('company-panel');
   const list=document.getElementById('cp-list');
 
+  // Library page has no company filter (filter by type instead, via pills)
+  if(S.page==='library'){panel.classList.add('hidden');return;}
+
   let companies=[];
   if(S.page==='applications'){
     const map={};
@@ -1330,6 +1450,7 @@ function updateBadges(){
   document.getElementById('conn-count').textContent=S.connections.length;
   document.getElementById('tc-count').textContent=S.targetCompanies.length;
   document.getElementById('ra-count').textContent=S.agencies.length;
+  document.getElementById('lib-count').textContent=S.library.length;
 }
 
 // ── STATS ─────────────────────────────────────────────────────────
@@ -2239,6 +2360,221 @@ function openViewAgency(id){
   openModal('view-modal');
 }
 
+// ── LIBRARY ───────────────────────────────────────────────────────
+const LIB_TYPES={
+  email:{label:'Email Draft',icon:'📧',cls:'lib-type-email'},
+  prompt:{label:'Prompt',icon:'💬',cls:'lib-type-prompt'},
+  note:{label:'Note',icon:'📝',cls:'lib-type-note'},
+};
+
+function syncLibSubjectVisibility(){
+  const t=document.getElementById('lib-type').value;
+  const wrap=document.getElementById('lib-subject-wrap');
+  if(wrap) wrap.style.display=t==='email'?'':'none';
+}
+
+function renderLibFilterPills(){
+  const counts={all:S.library.length,email:0,prompt:0,note:0};
+  S.library.forEach(i=>{if(counts[i.type]!==undefined)counts[i.type]++;});
+  const el=document.getElementById('lib-filter-pills');
+  if(!el)return;
+  const mk=(k,lbl)=>`<button class="pill${S.libFilter===k?' active':''}" onclick="setLibFilter('${k}')">${lbl} ${counts[k]}</button>`;
+  el.innerHTML=mk('all','All')+mk('email','📧 Emails')+mk('prompt','💬 Prompts')+mk('note','📝 Notes');
+}
+function setLibFilter(k){S.libFilter=k;renderLibrary();renderLibFilterPills();}
+
+function renderLibrary(){
+  const q=(document.getElementById('lib-search')?.value||'').toLowerCase();
+  const filtered=S.library.filter(i=>{
+    if(S.libFilter!=='all'&&i.type!==S.libFilter)return false;
+    if(!q)return true;
+    return (i.title||'').toLowerCase().includes(q)
+        ||(i.body||'').toLowerCase().includes(q)
+        ||(i.subject||'').toLowerCase().includes(q)
+        ||(i.tags||[]).some(t=>t.toLowerCase().includes(q));
+  });
+  const list=getSortedList(filtered,'library');
+  const area=document.getElementById('lib-area');
+  renderLibFilterPills();
+  if(!list.length){
+    area.innerHTML=`<div class="empty"><div class="empty-ic">📚</div><div class="empty-t">${S.library.length?'No matches':'Library is empty'}</div><p class="empty-s">${S.library.length?'Try a different filter or search term.':'Save email drafts, AI prompts, and notes here. Use {{company}}, {{role}}, {{my_name}} as variables — they get substituted when you copy from a specific application.'}</p>${S.isOwner&&!S.library.length?`<button class="btn btn-p" onclick="openAddLibModal()" style="margin-top:4px">＋ Add First Item</button>`:''}</div>`;
+    return;
+  }
+  if(S.viewMode.library==='list'){
+    area.innerHTML=`<div class="list-view list-lib">
+      <div class="list-head">
+        <div>Title</div><div>Type</div><div>Preview</div><div>Updated</div><div></div>
+      </div>
+      ${list.map(buildLibRow).join('')}
+    </div>`;
+  } else {
+    area.innerHTML=`<div class="lib-grid">${list.map(buildLibCard).join('')}</div>`;
+  }
+}
+
+function buildLibCard(i){
+  const t=LIB_TYPES[i.type]||LIB_TYPES.note;
+  const preview=(i.body||'').replace(/\s+/g,' ').slice(0,200);
+  const tagsHtml=(i.tags||[]).slice(0,4).map(tg=>`<span class="lib-tag">${esc(tg)}</span>`).join('');
+  const updated=i.updatedAt?new Date(i.updatedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditLibModal('${i.id}')">✏️ Edit</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteLibrary('${i.id}')">🗑 Delete</button>`:'';
+  return `<div class="lib-card" onclick="openViewLib('${i.id}')">
+    <div class="lib-card-top">
+      <div class="lib-card-title">${esc(i.title||'(Untitled)')}</div>
+      <span class="lib-type-badge ${t.cls}">${t.icon} ${t.label}</span>
+    </div>
+    ${i.type==='email'&&i.subject?`<div class="lib-subject">Re: ${esc(i.subject)}</div>`:''}
+    <div class="lib-preview">${esc(preview)}</div>
+    ${tagsHtml||updated?`<div class="lib-meta">${tagsHtml}${updated?`<span style="margin-left:auto">Updated ${updated}</span>`:''}</div>`:''}
+    <div class="lib-actions">${editDel}</div>
+  </div>`;
+}
+
+function buildLibRow(i){
+  const t=LIB_TYPES[i.type]||LIB_TYPES.note;
+  const preview=(i.body||'').replace(/\s+/g,' ').slice(0,80);
+  const updated=i.updatedAt?new Date(i.updatedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'—';
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditLibModal('${i.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteLibrary('${i.id}')" title="Delete">🗑</button>`:'';
+  return `<div class="list-row" onclick="openViewLib('${i.id}')">
+    <div class="list-cell list-cell-name" title="${esc(i.title||'')}">${esc(i.title||'(Untitled)')}</div>
+    <div class="list-cell"><span class="lib-type-badge ${t.cls}">${t.icon} ${t.label}</span></div>
+    <div class="list-cell list-cell-muted" title="${esc(preview)}">${esc(preview)}</div>
+    <div class="list-cell list-cell-mono">${updated}</div>
+    <div class="list-actions">${editDel}</div>
+  </div>`;
+}
+
+function openAddLibModal(){
+  if(!S.isOwner)return;
+  S.editingLibId=null;
+  document.getElementById('lib-modal-title').textContent='New Library Item';
+  ['lib-title','lib-subject','lib-body','lib-tags'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lib-type').value='email';
+  syncLibSubjectVisibility();
+  if(S.page!=='library')switchPage('library');
+  openModal('lib-modal');
+}
+function openEditLibModal(id){
+  if(!S.isOwner)return;
+  const i=S.library.find(x=>x.id===id);if(!i)return;
+  S.editingLibId=id;
+  document.getElementById('lib-modal-title').textContent='Edit Library Item';
+  document.getElementById('lib-title').value=i.title||'';
+  document.getElementById('lib-type').value=i.type||'note';
+  document.getElementById('lib-subject').value=i.subject||'';
+  document.getElementById('lib-body').value=i.body||'';
+  document.getElementById('lib-tags').value=(i.tags||[]).join(', ');
+  syncLibSubjectVisibility();
+  openModal('lib-modal');
+}
+async function saveLibrary(){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  const title=document.getElementById('lib-title').value.trim();
+  const body=document.getElementById('lib-body').value;
+  if(!title){toast('Title required','error');return;}
+  if(!body.trim()){toast('Body required','error');return;}
+  const item={
+    id:S.editingLibId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    title,
+    type:document.getElementById('lib-type').value,
+    subject:document.getElementById('lib-subject').value.trim(),
+    body,
+    tags:document.getElementById('lib-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    addedAt:S.editingLibId?(S.library.find(x=>x.id===S.editingLibId)?.addedAt||new Date().toISOString()):new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+  };
+  if(S.editingLibId){const idx=S.library.findIndex(x=>x.id===S.editingLibId);if(idx>=0)S.library[idx]=item;else S.library.push(item);}
+  else S.library.unshift(item);
+  const ok=await save();
+  if(ok){closeModal('lib-modal');renderLibrary();updateBadges();toast(S.editingLibId?'Updated!':'Saved to Library! 📚','success');}
+  else if(!S.editingLibId)S.library.shift();
+}
+async function deleteLibrary(id){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  if(!confirm('Delete this Library item?'))return;
+  S.library=S.library.filter(i=>i.id!==id);
+  if(await save()){renderLibrary();updateBadges();toast('Deleted','success');}
+}
+
+// Variable substitution + copy to clipboard
+function libSubstituteVars(text,ctx){
+  if(!text)return text;
+  return text
+    .replace(/\{\{\s*company\s*\}\}/gi,ctx.company||'{{company}}')
+    .replace(/\{\{\s*role\s*\}\}/gi,ctx.role||'{{role}}')
+    .replace(/\{\{\s*my_name\s*\}\}/gi,ctx.my_name||'{{my_name}}');
+}
+function libHighlightVars(text){
+  return esc(text||'').replace(/(\{\{\s*\w+\s*\}\})/g,'<span class="lib-var-highlight">$1</span>');
+}
+
+async function copyLibItem(id,withContextAppId){
+  const i=S.library.find(x=>x.id===id);if(!i)return;
+  let ctx={};
+  if(withContextAppId){
+    const a=S.apps.find(x=>x.id===withContextAppId);
+    if(a){ctx.company=a.company;ctx.role=a.role;}
+  }
+  const body=libSubstituteVars(i.body||'',ctx);
+  let toCopy=body;
+  if(i.type==='email'&&i.subject){
+    toCopy=`Subject: ${libSubstituteVars(i.subject,ctx)}\n\n${body}`;
+  }
+  try{
+    await navigator.clipboard.writeText(toCopy);
+    toast(withContextAppId?`Copied with ${ctx.company} context ✓`:'Copied to clipboard ✓','success');
+  }catch(e){toast('Copy failed — your browser may not support clipboard access','error');}
+}
+
+function openViewLib(id){
+  const i=S.library.find(x=>x.id===id);if(!i)return;
+  const t=LIB_TYPES[i.type]||LIB_TYPES.note;
+  const updated=i.updatedAt?new Date(i.updatedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  const tagsHtml=(i.tags||[]).map(tg=>`<span class="lib-tag">${esc(tg)}</span>`).join(' ');
+  const editBtn=S.isOwner?`<button class="btn btn-sm" onclick="closeModal('view-modal');openEditLibModal('${i.id}')">✏️ Edit</button>`:'';
+  const bodyText=i.body||'';
+  const hasVars=/\{\{\s*\w+\s*\}\}/.test(bodyText)||(i.type==='email'&&i.subject&&/\{\{\s*\w+\s*\}\}/.test(i.subject));
+  let copyContextHtml='';
+  if(hasVars&&S.apps.length){
+    const opts=S.apps.slice(0,50).map(a=>`<option value="${a.id}">${esc(a.company)} — ${esc(a.role)}</option>`).join('');
+    copyContextHtml=`<div style="display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted)">Copy with context from:</span>
+      <select id="lib-ctx-select" class="fs" style="flex:1;min-width:160px;max-width:280px;font-size:12px;padding:5px 8px">
+        <option value="">— pick an application —</option>
+        ${opts}
+      </select>
+      <button class="btn btn-sm btn-p" onclick="copyLibItem('${i.id}',document.getElementById('lib-ctx-select').value)">Copy with context</button>
+    </div>`;
+  }
+
+  document.getElementById('view-modal-content').innerHTML=`
+    <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
+    <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:1.25rem">
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--font-display);font-size:1.15rem;font-weight:500">${esc(i.title||'(Untitled)')}</div>
+        ${updated?`<div style="font-size:11px;color:var(--muted);font-family:var(--font-mono);margin-top:3px">Updated ${esc(updated)}</div>`:''}
+      </div>
+      <span class="lib-type-badge ${t.cls}">${t.icon} ${t.label}</span>
+    </div>
+    ${i.type==='email'&&i.subject?`<div class="vf"><div class="vl">Subject</div><div style="font-size:13px;font-style:italic;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:8px 11px;border-radius:6px">${libHighlightVars(i.subject)}</div></div>`:''}
+    <div class="vf">
+      <div class="vl">Body</div>
+      <div class="lib-body-view">${libHighlightVars(bodyText)}</div>
+    </div>
+    ${tagsHtml?`<div class="vf"><div class="vl">Tags</div><div style="display:flex;flex-wrap:wrap;gap:5px">${tagsHtml}</div></div>`:''}
+    <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sm btn-p" onclick="copyLibItem('${i.id}',null)">📋 Copy to Clipboard</button>
+      ${editBtn}
+      <button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button>
+    </div>
+    ${copyContextHtml}`;
+  openModal('view-modal');
+}
+
 // ── VIEW MODALS ───────────────────────────────────────────────────
 function openViewConn(id){
   const c=S.connections.find(x=>x.id===id);if(!c)return;
@@ -2450,7 +2786,7 @@ async function saveApiKey(){
     btn.textContent='Creating Gist…';
     const gistId=await createDataGist(gh);
     S.ghToken=gh;S.dataGistId=gistId;S.isOwner=true;
-    S.apps=[];S.connections=[];S.targetCompanies=[];S.agencies=[];
+    S.apps=[];S.connections=[];S.targetCompanies=[];S.agencies=[];S.library=[];
     localStorage.setItem('jt_gh',gh);
     localStorage.setItem('jt_gist',gistId);
     document.getElementById('setup-screen').classList.remove('open');
@@ -2518,7 +2854,7 @@ function copyShareLink(){
   navigator.clipboard.writeText(url).then(()=>toast('Share link copied! 🔗','success'));
 }
 function exportData(){
-  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies},null,2)],{type:'application/json'});
+  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies,library:S.library},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();
 }
 function clearLocal(){
