@@ -343,6 +343,68 @@ a{color:inherit;text-decoration:none;}
 .list-lib .list-head, .list-lib .list-row{
   grid-template-columns:minmax(160px,1.5fr) 100px minmax(180px,2fr) 90px 80px;
 }
+
+/* TO-DO TASKS */
+.todo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.todo-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;display:flex;gap:11px;align-items:flex-start;
+  transition:all .2s;position:relative;cursor:pointer;
+}
+.todo-card:hover{background:var(--surface2);border-color:var(--border2);box-shadow:var(--shadow);}
+.todo-card.done{opacity:.62;}
+.todo-card.overdue{
+  border-color:rgba(200,48,47,.30);
+  background:rgba(200,48,47,.03);
+}
+.todo-card.overdue:hover{background:rgba(200,48,47,.07);}
+.todo-card.overdue::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--danger),#e8504a);border-radius:var(--r) var(--r) 0 0;
+}
+/* round checkbox */
+.todo-check{
+  width:22px;height:22px;border-radius:50%;border:2px solid var(--border3);
+  background:var(--surface);cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:0;
+  transition:all .15s;margin-top:1px;
+}
+.todo-check:hover{border-color:var(--accent);}
+.todo-check.checked{background:var(--accent);border-color:var(--accent);color:#fff;font-size:13px;font-weight:700;}
+.todo-check.checked::before{content:'✓';}
+.todo-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.todo-title{font-weight:600;font-size:14px;color:var(--text);line-height:1.35;word-break:break-word;}
+.todo-card.done .todo-title{text-decoration:line-through;color:var(--muted);}
+.todo-desc{
+  font-size:11.5px;color:var(--text2);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;white-space:pre-wrap;word-break:break-word;
+}
+.todo-card.done .todo-desc{color:var(--muted);}
+.todo-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.todo-due{
+  font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:10px;
+  font-family:var(--font-mono);white-space:nowrap;
+}
+.todo-due-future{background:rgba(91,138,31,.10);color:#436a13;border:1px solid rgba(91,138,31,.25);}
+.todo-due-today{background:rgba(240,185,50,.15);color:#a87a18;border:1px solid rgba(240,185,50,.40);}
+.todo-due-overdue{background:rgba(200,48,47,.10);color:#a82221;border:1px solid rgba(200,48,47,.28);}
+.todo-due-none{background:var(--surface3);color:var(--muted);border:1px solid var(--border);}
+.todo-actions{
+  display:flex;gap:5px;opacity:0;transition:opacity .2s;flex-shrink:0;align-self:flex-start;
+}
+.todo-card:hover .todo-actions{opacity:1;}
+
+.list-todos .list-head, .list-todos .list-row{
+  grid-template-columns:38px minmax(160px,1.7fr) 130px 100px 80px;
+}
+.list-todos .list-row.done .list-cell{opacity:.62;}
+.list-todos .list-row.done .list-cell-name{text-decoration:line-through;color:var(--muted);}
+.list-todos .list-row.overdue{background:rgba(200,48,47,.04);}
+.list-todos .list-row.overdue:hover{background:rgba(200,48,47,.08);}
+@media(max-width:680px){
+  .list-todos .list-row{grid-template-columns:1fr;gap:4px;padding:12px 14px;}
+}
 .pill{
   font-size:11px;font-weight:500;padding:3px 11px;border-radius:20px;
   border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;
@@ -765,6 +827,9 @@ a{color:inherit;text-decoration:none;}
   <div class="nav" id="nav-lib" onclick="switchPage('library')">
     <span class="nav-ic">📚</span>Library<span class="nav-badge" id="lib-count">0</span>
   </div>
+  <div class="nav" id="nav-todo" onclick="switchPage('todos')">
+    <span class="nav-ic">✓</span>To-Do Tasks<span class="nav-badge" id="todo-count">0</span>
+  </div>
   <div class="sb-div"></div>
   <div class="sb-sec">Quick Add</div>
   <div class="nav" id="nav-add-app" onclick="openAddModal()" style="display:none">
@@ -781,6 +846,9 @@ a{color:inherit;text-decoration:none;}
   </div>
   <div class="nav" id="nav-add-lib" onclick="openAddLibModal()" style="display:none">
     <span class="nav-ic">＋</span>Library Item
+  </div>
+  <div class="nav" id="nav-add-todo" onclick="openAddTodoModal()" style="display:none">
+    <span class="nav-ic">＋</span>To-Do Task
   </div>
   <div class="sb-bottom">
     <div class="nav" id="share-nav" onclick="copyShareLink()" style="display:none"><span class="nav-ic">↗</span>Share View</div>
@@ -922,6 +990,28 @@ a{color:inherit;text-decoration:none;}
           <button class="btn btn-p btn-sm" id="add-lib-btn" onclick="openAddLibModal()" style="display:none">＋ Add to Library</button>
         </div>
         <div id="lib-area"></div>
+      </div>
+
+      <!-- TO-DO TASKS PAGE -->
+      <div class="page" id="page-todos">
+        <div class="toolbar">
+          <div class="sw"><span class="s-ic">🔍</span><input type="text" id="todo-search" placeholder="Search task…" oninput="renderTodos()"></div>
+          <div class="pills" id="todo-filter-pills"></div>
+          <div class="vm-toggle" style="margin-left:auto" title="View mode">
+            <button class="vm-btn active" id="vm-cards-todos" onclick="setViewMode('todos','cards')" title="Card view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-list-todos" onclick="setViewMode('todos','list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="5" y1="3.5" x2="14" y2="3.5"/><line x1="5" y1="8" x2="14" y2="8"/><line x1="5" y1="12.5" x2="14" y2="12.5"/><circle cx="2.5" cy="3.5" r=".8" fill="currentColor"/><circle cx="2.5" cy="8" r=".8" fill="currentColor"/><circle cx="2.5" cy="12.5" r=".8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="view-wrap">
+            <button class="view-btn" id="view-btn-todos" onclick="toggleViewMenu('todos')">👁 View<span class="view-caret">▾</span></button>
+            <div class="view-menu" id="view-menu-todos"></div>
+          </div>
+          <button class="btn btn-p btn-sm" id="add-todo-btn" onclick="openAddTodoModal()" style="display:none">＋ Add Task</button>
+        </div>
+        <div id="todo-area"></div>
       </div>
     </div>
   </div>
@@ -1094,6 +1184,23 @@ a{color:inherit;text-decoration:none;}
   </div>
 </div>
 
+<!-- ADD/EDIT TO-DO MODAL -->
+<div class="overlay" id="todo-modal">
+  <div class="modal modal-sm">
+    <button class="mc-btn" onclick="closeModal('todo-modal')">✕</button>
+    <div class="modal-title" id="todo-modal-title">New To-Do Task</div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div class="fg"><label class="fl">Title *</label><input type="text" id="todo-title" class="fi" placeholder="Follow up with recruiter at Stripe"/></div>
+      <div class="fg"><label class="fl">Due Date <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— optional</span></label><input type="date" id="todo-due" class="fi"/></div>
+      <div class="fg"><label class="fl">Description <span style="color:var(--muted);font-size:9px;letter-spacing:0;font-weight:400;text-transform:none">— optional</span></label><textarea id="todo-desc" class="ft" placeholder="Send a polite nudge with the updated CV…" style="min-height:80px"></textarea></div>
+    </div>
+    <div class="fa">
+      <button class="btn" onclick="closeModal('todo-modal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveTodo()">Save Task</button>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW MODAL -->
 <div class="overlay" id="view-modal"><div class="modal" id="view-modal-content"></div></div>
 
@@ -1102,18 +1209,19 @@ a{color:inherit;text-decoration:none;}
 
 <script>
 const GH='https://api.github.com';
-let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],agencies:[],library:[],isOwner:false,
-  editingId:null,editingCId:null,editingTCId:null,editingRAId:null,editingLibId:null,
+let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],agencies:[],library:[],todos:[],isOwner:false,
+  editingId:null,editingCId:null,editingTCId:null,editingRAId:null,editingLibId:null,editingTodoId:null,
   cvB64:null,cvName:null,
   clB64:null,clName:null,
   jdB64:null,jdName:null,
-  filter:'all',page:'applications',companyFilter:'all',libFilter:'all',
+  filter:'all',page:'applications',companyFilter:'all',libFilter:'all',todoFilter:'all',
   sort:{
     applications:{by:'date',dir:'desc'},
     connections:{by:'name',dir:'asc'},
     targets:{by:'name',dir:'asc'},
     agencies:{by:'name',dir:'asc'},
     library:{by:'date',dir:'desc'},
+    todos:{by:'date',dir:'asc'},
   },
   viewMode:{
     applications:'cards',
@@ -1121,6 +1229,7 @@ let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],ag
     targets:'cards',
     agencies:'cards',
     library:'cards',
+    todos:'cards',
   }};
 const COLORS=['#5b8a1f','#1d9c6e','#d2611f','#2563c4','#a3367f','#b87800','#7d28b4','#1f8a5b','#a8501a','#1d4fa1'];
 const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
@@ -1170,9 +1279,9 @@ function switchPage(pg){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav[id^="nav-"]').forEach(n=>n.classList.remove('active'));
   document.getElementById(`page-${pg}`).classList.add('active');
-  const navMap={applications:'nav-apps',connections:'nav-conn',targets:'nav-tc',agencies:'nav-ra',library:'nav-lib'};
+  const navMap={applications:'nav-apps',connections:'nav-conn',targets:'nav-tc',agencies:'nav-ra',library:'nav-lib',todos:'nav-todo'};
   if(navMap[pg]) document.getElementById(navMap[pg]).classList.add('active');
-  const titleMap={applications:'Applications',connections:'Connections',targets:'Target Companies',agencies:'Recruitment Agencies',library:'Library'};
+  const titleMap={applications:'Applications',connections:'Connections',targets:'Target Companies',agencies:'Recruitment Agencies',library:'Library',todos:'To-Do Tasks'};
   document.getElementById('page-title').textContent=titleMap[pg]||pg;
   // Stats bar only on Applications page
   document.getElementById('stats-bar').style.display=pg==='applications'?'block':'none';
@@ -1181,6 +1290,7 @@ function switchPage(pg){
   else if(pg==='targets') renderTargets();
   else if(pg==='agencies') renderAgencies();
   else if(pg==='library') renderLibrary();
+  else if(pg==='todos') renderTodos();
   renderCompanyPanel();
 }
 
@@ -1213,7 +1323,7 @@ async function load(){
     if(f.truncated){const raw=await fetchT(f.raw_url);content=await raw.text();}
     else content=f.content;
     const rec=JSON.parse(content);
-    S.apps=rec.apps||[];S.connections=rec.connections||[];S.targetCompanies=rec.targetCompanies||[];S.agencies=rec.agencies||[];S.library=rec.library||[];
+    S.apps=rec.apps||[];S.connections=rec.connections||[];S.targetCompanies=rec.targetCompanies||[];S.agencies=rec.agencies||[];S.library=rec.library||[];S.todos=rec.todos||[];
     return true;
   }catch(e){
     toast(e.name==='AbortError'?'Request timed out — check your internet connection':'Load failed: '+e.message,'error');
@@ -1227,7 +1337,7 @@ async function save(){
   if(!S.isOwner||!S.ghToken||!S.dataGistId)return false;
   try{
     const lean=S.apps.map(({cvBase64,...rest})=>rest);
-    const payload=JSON.stringify({apps:lean,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies,library:S.library},null,2);
+    const payload=JSON.stringify({apps:lean,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies,library:S.library,todos:S.todos},null,2);
     const r=await fetchT(`${GH}/gists/${S.dataGistId}`,{
       method:'PATCH',
       headers:{'Authorization':`token ${S.ghToken}`,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
@@ -1249,7 +1359,7 @@ async function createDataGist(token){
     body:JSON.stringify({
       description:'JobTrackr — Job Application Data',
       public:false,
-      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[],targetCompanies:[],agencies:[],library:[]},null,2)}}
+      files:{'jobtrackr-data.json':{content:JSON.stringify({apps:[],connections:[],targetCompanies:[],agencies:[],library:[],todos:[]},null,2)}}
     })
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Failed to create Gist');}
@@ -1260,7 +1370,7 @@ async function createDataGist(token){
 // ── SHOW APP ──────────────────────────────────────────────────────
 function go(){
   document.getElementById('main-area').style.cssText='display:flex;flex-direction:column;';
-  const ownerEls=['write-badge','share-btn','share-nav','nav-add-app','nav-add-conn','nav-add-tc','nav-add-ra','nav-add-lib','add-app-btn','add-conn-btn','add-tc-btn','add-ra-btn','add-lib-btn'];
+  const ownerEls=['write-badge','share-btn','share-nav','nav-add-app','nav-add-conn','nav-add-tc','nav-add-ra','nav-add-lib','nav-add-todo','add-app-btn','add-conn-btn','add-tc-btn','add-ra-btn','add-lib-btn','add-todo-btn'];
   if(S.isOwner){
     ownerEls.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-flex';});
   } else {
@@ -1372,8 +1482,8 @@ function renderCompanyPanel(){
   const panel=document.getElementById('company-panel');
   const list=document.getElementById('cp-list');
 
-  // Library page has no company filter (filter by type instead, via pills)
-  if(S.page==='library'){panel.classList.add('hidden');return;}
+  // Library and To-Do pages have no company filter (standalone, filter by type/status instead)
+  if(S.page==='library'||S.page==='todos'){panel.classList.add('hidden');return;}
 
   let companies=[];
   if(S.page==='applications'){
@@ -1451,6 +1561,8 @@ function updateBadges(){
   document.getElementById('tc-count').textContent=S.targetCompanies.length;
   document.getElementById('ra-count').textContent=S.agencies.length;
   document.getElementById('lib-count').textContent=S.library.length;
+  // Show count of OPEN tasks in sidebar badge (not completed) — more useful
+  document.getElementById('todo-count').textContent=S.todos.filter(t=>!t.completed).length;
 }
 
 // ── STATS ─────────────────────────────────────────────────────────
@@ -2575,6 +2687,206 @@ function openViewLib(id){
   openModal('view-modal');
 }
 
+// ── TO-DO TASKS ───────────────────────────────────────────────────
+function todoDueStatus(due){
+  if(!due)return'none';
+  const t=today();
+  if(due<t)return'overdue';
+  if(due===t)return'today';
+  return'future';
+}
+
+function renderTodoFilterPills(){
+  const counts={
+    all:S.todos.length,
+    pending:S.todos.filter(t=>!t.completed).length,
+    completed:S.todos.filter(t=>t.completed).length,
+  };
+  const el=document.getElementById('todo-filter-pills');
+  if(!el)return;
+  const mk=(k,lbl)=>`<button class="pill${S.todoFilter===k?' active':''}" onclick="setTodoFilter('${k}')">${lbl} ${counts[k]}</button>`;
+  el.innerHTML=mk('all','All')+mk('pending','Pending')+mk('completed','Completed');
+}
+function setTodoFilter(k){S.todoFilter=k;renderTodos();}
+
+function getSortedTodos(arr){
+  // Completed always go to the end, regardless of sort
+  const pending=arr.filter(t=>!t.completed);
+  const done=arr.filter(t=>t.completed);
+  return [...getSortedList(pending,'todos'),...getSortedList(done,'todos')];
+}
+
+function renderTodos(){
+  const q=(document.getElementById('todo-search')?.value||'').toLowerCase();
+  const filtered=S.todos.filter(t=>{
+    if(S.todoFilter==='pending'&&t.completed)return false;
+    if(S.todoFilter==='completed'&&!t.completed)return false;
+    if(!q)return true;
+    return (t.title||'').toLowerCase().includes(q)||(t.description||'').toLowerCase().includes(q);
+  });
+  const list=getSortedTodos(filtered);
+  const area=document.getElementById('todo-area');
+  renderTodoFilterPills();
+  if(!list.length){
+    area.innerHTML=`<div class="empty"><div class="empty-ic">✓</div><div class="empty-t">${S.todos.length?'No matching tasks':'No tasks yet'}</div><p class="empty-s">${S.todos.length?'Try a different filter.':'Log tasks to keep track of your job-search to-dos. Completed ones move to the bottom.'}</p>${S.isOwner&&!S.todos.length?`<button class="btn btn-p" onclick="openAddTodoModal()" style="margin-top:4px">＋ Add First Task</button>`:''}</div>`;
+    return;
+  }
+  if(S.viewMode.todos==='list'){
+    area.innerHTML=`<div class="list-view list-todos">
+      <div class="list-head">
+        <div></div><div>Task</div><div>Due Date</div><div>Status</div><div></div>
+      </div>
+      ${list.map(buildTodoRow).join('')}
+    </div>`;
+  } else {
+    area.innerHTML=`<div class="todo-grid">${list.map(buildTodoCard).join('')}</div>`;
+  }
+}
+
+function dueLabel(due){
+  if(!due)return'No date';
+  const dt=new Date(due+'T00:00:00');
+  const t=today();
+  if(due<t)return`Overdue · ${fmtDate(due)}`;
+  if(due===t)return`Today · ${fmtDate(due)}`;
+  return fmtDate(due);
+}
+
+function buildTodoCard(t){
+  const due=t.dueDate||null;
+  const dst=todoDueStatus(due);
+  const dueClass=t.completed?'todo-due-none':(dst==='overdue'?'todo-due-overdue':dst==='today'?'todo-due-today':dst==='future'?'todo-due-future':'todo-due-none');
+  const editDel=S.isOwner?`<div class="todo-actions">
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditTodoModal('${t.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteTodo('${t.id}')" title="Delete">🗑</button>
+  </div>`:'';
+  const cardCls=['todo-card'];
+  if(t.completed)cardCls.push('done');
+  else if(dst==='overdue')cardCls.push('overdue');
+  return `<div class="${cardCls.join(' ')}" onclick="openViewTodo('${t.id}')">
+    <div class="todo-check${t.completed?' checked':''}" onclick="event.stopPropagation();toggleTodo('${t.id}')" title="${t.completed?'Mark incomplete':'Mark complete'}"></div>
+    <div class="todo-body">
+      <div class="todo-title">${esc(t.title||'(Untitled)')}</div>
+      ${t.description?`<div class="todo-desc">${esc(t.description)}</div>`:''}
+      <div class="todo-meta">
+        <span class="todo-due ${dueClass}">${due?dueLabel(due):'No date'}</span>
+      </div>
+    </div>
+    ${editDel}
+  </div>`;
+}
+
+function buildTodoRow(t){
+  const due=t.dueDate||null;
+  const dst=todoDueStatus(due);
+  const dueClass=t.completed?'todo-due-none':(dst==='overdue'?'todo-due-overdue':dst==='today'?'todo-due-today':dst==='future'?'todo-due-future':'todo-due-none');
+  const editDel=S.isOwner?`
+    <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openEditTodoModal('${t.id}')" title="Edit">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();deleteTodo('${t.id}')" title="Delete">🗑</button>`:'';
+  const rowCls=['list-row'];
+  if(t.completed)rowCls.push('done');
+  else if(dst==='overdue')rowCls.push('overdue');
+  return `<div class="${rowCls.join(' ')}" onclick="openViewTodo('${t.id}')">
+    <div class="list-cell" style="overflow:visible">
+      <div class="todo-check${t.completed?' checked':''}" onclick="event.stopPropagation();toggleTodo('${t.id}')" title="${t.completed?'Mark incomplete':'Mark complete'}"></div>
+    </div>
+    <div class="list-cell list-cell-name" title="${esc(t.title||'')}" style="color:var(--text)">${esc(t.title||'(Untitled)')}</div>
+    <div class="list-cell"><span class="todo-due ${dueClass}">${due?fmtDate(due):'No date'}</span></div>
+    <div class="list-cell list-cell-muted">${t.completed?'✓ Done':'Pending'}</div>
+    <div class="list-actions">${editDel}</div>
+  </div>`;
+}
+
+function openAddTodoModal(){
+  if(!S.isOwner)return;
+  S.editingTodoId=null;
+  document.getElementById('todo-modal-title').textContent='New To-Do Task';
+  ['todo-title','todo-due','todo-desc'].forEach(id=>document.getElementById(id).value='');
+  if(S.page!=='todos')switchPage('todos');
+  openModal('todo-modal');
+}
+function openEditTodoModal(id){
+  if(!S.isOwner)return;
+  const t=S.todos.find(x=>x.id===id);if(!t)return;
+  S.editingTodoId=id;
+  document.getElementById('todo-modal-title').textContent='Edit To-Do Task';
+  document.getElementById('todo-title').value=t.title||'';
+  document.getElementById('todo-due').value=t.dueDate||'';
+  document.getElementById('todo-desc').value=t.description||'';
+  openModal('todo-modal');
+}
+async function saveTodo(){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  const title=document.getElementById('todo-title').value.trim();
+  if(!title){toast('Title required','error');return;}
+  const existing=S.editingTodoId?S.todos.find(x=>x.id===S.editingTodoId):null;
+  const item={
+    id:S.editingTodoId||Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    title,
+    description:document.getElementById('todo-desc').value.trim(),
+    dueDate:document.getElementById('todo-due').value||null,
+    completed:existing?.completed||false,
+    completedAt:existing?.completedAt||null,
+    addedAt:existing?.addedAt||new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+  };
+  if(S.editingTodoId){const idx=S.todos.findIndex(x=>x.id===S.editingTodoId);if(idx>=0)S.todos[idx]=item;else S.todos.push(item);}
+  else S.todos.unshift(item);
+  const ok=await save();
+  if(ok){closeModal('todo-modal');renderTodos();updateBadges();toast(S.editingTodoId?'Updated!':'Task added ✓','success');}
+  else if(!S.editingTodoId)S.todos.shift();
+}
+async function deleteTodo(id){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  if(!confirm('Delete this task?'))return;
+  S.todos=S.todos.filter(t=>t.id!==id);
+  if(await save()){renderTodos();updateBadges();toast('Deleted','success');}
+}
+async function toggleTodo(id){
+  if(!S.isOwner){toast('Read-only mode','error');return;}
+  const t=S.todos.find(x=>x.id===id);if(!t)return;
+  const prev=[...S.todos];
+  const idx=S.todos.findIndex(x=>x.id===id);
+  S.todos[idx]={...t,
+    completed:!t.completed,
+    completedAt:!t.completed?new Date().toISOString():null,
+    updatedAt:new Date().toISOString()};
+  if(await save()){renderTodos();updateBadges();toast(!t.completed?'Marked complete ✓':'Reopened','success');}
+  else{S.todos=prev;}
+}
+
+function openViewTodo(id){
+  const t=S.todos.find(x=>x.id===id);if(!t)return;
+  const due=t.dueDate||null;
+  const dst=todoDueStatus(due);
+  const dueClass=t.completed?'todo-due-none':(dst==='overdue'?'todo-due-overdue':dst==='today'?'todo-due-today':dst==='future'?'todo-due-future':'todo-due-none');
+  const updated=t.updatedAt?new Date(t.updatedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  const completedTxt=t.completed&&t.completedAt?new Date(t.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  const editBtn=S.isOwner?`<button class="btn btn-sm" onclick="closeModal('view-modal');openEditTodoModal('${t.id}')">✏️ Edit</button>`:'';
+  const toggleBtn=S.isOwner?`<button class="btn btn-sm btn-p" onclick="toggleTodo('${t.id}');openViewTodo('${t.id}')">${t.completed?'↺ Reopen':'✓ Mark Complete'}</button>`:'';
+  document.getElementById('view-modal-content').innerHTML=`
+    <button class="mc-btn" onclick="closeModal('view-modal')">✕</button>
+    <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:1.25rem">
+      <div class="todo-check${t.completed?' checked':''}" onclick="${S.isOwner?`toggleTodo('${t.id}');openViewTodo('${t.id}')`:''}" style="${S.isOwner?'':'cursor:default'}" title="${t.completed?'Mark incomplete':'Mark complete'}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--font-display);font-size:1.15rem;font-weight:500;line-height:1.3;${t.completed?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title||'(Untitled)')}</div>
+        ${updated?`<div style="font-size:11px;color:var(--muted);font-family:var(--font-mono);margin-top:3px">Updated ${esc(updated)}</div>`:''}
+      </div>
+    </div>
+    <div class="vf">
+      <div class="vl">Due Date</div>
+      <span class="todo-due ${dueClass}" style="font-size:12px;padding:4px 11px">${due?dueLabel(due):'No date'}</span>
+    </div>
+    ${t.description?`<div class="vf"><div class="vl">Description</div><div class="vnotes">${esc(t.description)}</div></div>`:''}
+    ${t.completed&&completedTxt?`<div class="vf"><div class="vl">Completed</div><div style="font-size:12px;color:var(--accent);font-family:var(--font-mono)">✓ ${esc(completedTxt)}</div></div>`:''}
+    <div style="display:flex;gap:7px;margin-top:1rem;justify-content:flex-end;flex-wrap:wrap">
+      ${toggleBtn}
+      ${editBtn}
+      <button class="btn btn-sm" onclick="closeModal('view-modal')">Close</button>
+    </div>`;
+  openModal('view-modal');
+}
+
 // ── VIEW MODALS ───────────────────────────────────────────────────
 function openViewConn(id){
   const c=S.connections.find(x=>x.id===id);if(!c)return;
@@ -2786,7 +3098,7 @@ async function saveApiKey(){
     btn.textContent='Creating Gist…';
     const gistId=await createDataGist(gh);
     S.ghToken=gh;S.dataGistId=gistId;S.isOwner=true;
-    S.apps=[];S.connections=[];S.targetCompanies=[];S.agencies=[];S.library=[];
+    S.apps=[];S.connections=[];S.targetCompanies=[];S.agencies=[];S.library=[];S.todos=[];
     localStorage.setItem('jt_gh',gh);
     localStorage.setItem('jt_gist',gistId);
     document.getElementById('setup-screen').classList.remove('open');
@@ -2854,7 +3166,7 @@ function copyShareLink(){
   navigator.clipboard.writeText(url).then(()=>toast('Share link copied! 🔗','success'));
 }
 function exportData(){
-  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies,library:S.library},null,2)],{type:'application/json'});
+  const b=new Blob([JSON.stringify({apps:S.apps,connections:S.connections,targetCompanies:S.targetCompanies,agencies:S.agencies,library:S.library,todos:S.todos},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobtrackr-backup.json';a.click();
 }
 function clearLocal(){
