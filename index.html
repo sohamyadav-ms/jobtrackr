@@ -1029,7 +1029,7 @@ a{color:inherit;text-decoration:none;}
       <div class="fg"><label class="fl">Status</label>
         <select id="f-status" class="fs" onchange="syncFollowUpVisibility()">
           <option value="pending">Pending Application</option><option value="applied">Applied</option>
-          <option value="interviewing">Interviewing</option><option value="offer">Offer 🎉</option>
+          <option value="interviewing">Interviewing</option><option value="offer">Offer</option>
           <option value="rejected">Rejected</option><option value="ghosted">Ghosted</option>
           <option value="withdrawn">Withdrawn</option>
         </select>
@@ -1232,7 +1232,7 @@ let S={ghToken:null,dataGistId:null,apps:[],connections:[],targetCompanies:[],ag
     todos:'cards',
   }};
 const COLORS=['#5b8a1f','#1d9c6e','#d2611f','#2563c4','#a3367f','#b87800','#7d28b4','#1f8a5b','#a8501a','#1d4fa1'];
-const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer 🎉',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
+const SLABELS={all:'All',pending:'Pending Application',applied:'Applied',interviewing:'Interviewing',offer:'Offer',rejected:'Rejected',ghosted:'Ghosted',withdrawn:'Withdrawn'};
 const aColor=n=>COLORS[(n||'?').charCodeAt(0)%COLORS.length];
 const ini=n=>(n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1388,16 +1388,17 @@ function go(){
   document.getElementById('f-date').value=today();
   document.getElementById('stats-bar').style.display='block';
   // initialise view button labels with default sort
-  ['applications','connections','targets','agencies'].forEach(updateViewBtnLabel);
+  ['applications','connections','targets','agencies','library','todos'].forEach(updateViewBtnLabel);
   renderAll();
 }
 // ── VIEW / SORT ─────────────────────────────────────────────────
-const PAGE_DATE_FIELD={applications:'date',connections:'addedAt',targets:'addedAt',agencies:'addedAt'};
+const PAGE_DATE_FIELD={applications:'date',connections:'addedAt',targets:'addedAt',agencies:'addedAt',library:'updatedAt',todos:'dueDate'};
+const PAGE_NAME_FIELD={applications:'company',connections:'name',targets:'name',agencies:'name',library:'title',todos:'title'};
 
 function getSortedList(arr,pageKey){
   const cfg=S.sort[pageKey]||{by:'name',dir:'asc'};
   const dateField=PAGE_DATE_FIELD[pageKey]||'addedAt';
-  const nameField=pageKey==='connections'?'name':(pageKey==='applications'?'company':'name');
+  const nameField=PAGE_NAME_FIELD[pageKey]||'name';
   const dir=cfg.dir==='desc'?-1:1;
   const copy=[...arr];
   if(cfg.by==='date'){
@@ -1444,6 +1445,8 @@ function setSort(pageKey,by,dir){
   else if(pageKey==='connections') renderConnections();
   else if(pageKey==='targets') renderTargets();
   else if(pageKey==='agencies') renderAgencies();
+  else if(pageKey==='library') renderLibrary();
+  else if(pageKey==='todos') renderTodos();
 }
 
 function updateViewBtnLabel(pageKey){
@@ -1465,6 +1468,8 @@ function setViewMode(pageKey,mode){
   else if(pageKey==='connections') renderConnections();
   else if(pageKey==='targets') renderTargets();
   else if(pageKey==='agencies') renderAgencies();
+  else if(pageKey==='library') renderLibrary();
+  else if(pageKey==='todos') renderTodos();
 }
 
 // Close view menus when clicking outside
@@ -1719,7 +1724,7 @@ function buildCard(a){
   const fuNextNum=(a.followUpLog||[]).length+1;
 
   const fuRowHtml=(isApplied&&fud)||(isApplied&&S.isOwner)?`<div class="fu-row" onclick="event.stopPropagation()">
-    <span class="fu-label">🔔 Follow-up Date${fst==='overdue'?' (Overdue)':fst==='today'?' (Today!)':''}</span>
+    <span class="fu-label">🕐 Follow-up Date${fst==='overdue'?' (Overdue)':fst==='today'?' (Today!)':''}</span>
     <span class="fu-date ${fst==='overdue'?'overdue':fst==='today'?'today':''}">${fud?fmtDate(fud):'—'}</span>
     <div class="fu-actions">
       ${S.isOwner?`<button class="fu-log-btn" onclick="logFollowUp('${a.id}')">✓ Log</button>`:''}
@@ -2060,7 +2065,7 @@ async function saveApplication(){
     const ok=await save();
     if(ok){
       closeModal('add-modal');renderAll();
-      toast(S.editingId?'Updated! ✓':'Application added! 🎉','success');
+      toast(S.editingId?'Updated':'Application added','success');
     } else {
       S.apps=prev; // revert
     }
@@ -2119,7 +2124,7 @@ async function saveConnection(){
   if(S.editingCId){const i=S.connections.findIndex(x=>x.id===S.editingCId);if(i>=0)S.connections[i]=conn;else S.connections.push(conn);}
   else S.connections.unshift(conn);
   const ok=await save();
-  if(ok){closeModal('conn-modal');renderConnections();updateBadges();renderCards();renderTargets();renderCompanyPanel();toast(S.editingCId?'Connection updated!':'Connection saved! 🔗','success');}
+  if(ok){closeModal('conn-modal');renderConnections();updateBadges();renderCards();renderTargets();renderCompanyPanel();toast(S.editingCId?'Connection updated!':'Connection saved','success');}
   else if(!S.editingCId)S.connections.shift();
 }
 async function deleteConn(id){
@@ -2291,7 +2296,7 @@ async function saveTarget(){
   if(S.editingTCId){const i=S.targetCompanies.findIndex(x=>x.id===S.editingTCId);if(i>=0)S.targetCompanies[i]=tc;else S.targetCompanies.push(tc);}
   else S.targetCompanies.unshift(tc);
   const ok=await save();
-  if(ok){closeModal('tc-modal');renderTargets();updateBadges();renderCards();renderCompanyPanel();toast(S.editingTCId?'Target updated!':'Target company added! ⭐','success');}
+  if(ok){closeModal('tc-modal');renderTargets();updateBadges();renderCards();renderCompanyPanel();toast(S.editingTCId?'Target updated!':'Target company added','success');}
   else if(!S.editingTCId)S.targetCompanies.shift();
 }
 async function deleteTc(id){
@@ -2422,7 +2427,7 @@ async function saveAgency(){
   if(S.editingRAId){const i=S.agencies.findIndex(x=>x.id===S.editingRAId);if(i>=0)S.agencies[i]=ag;else S.agencies.push(ag);}
   else S.agencies.unshift(ag);
   const ok=await save();
-  if(ok){closeModal('ra-modal');renderAgencies();updateBadges();renderCompanyPanel();toast(S.editingRAId?'Agency updated!':'Agency added! 🏢','success');}
+  if(ok){closeModal('ra-modal');renderAgencies();updateBadges();renderCompanyPanel();toast(S.editingRAId?'Agency updated!':'Agency added','success');}
   else if(!S.editingRAId)S.agencies.shift();
 }
 async function deleteAgency(id){
@@ -2602,7 +2607,7 @@ async function saveLibrary(){
   if(S.editingLibId){const idx=S.library.findIndex(x=>x.id===S.editingLibId);if(idx>=0)S.library[idx]=item;else S.library.push(item);}
   else S.library.unshift(item);
   const ok=await save();
-  if(ok){closeModal('lib-modal');renderLibrary();updateBadges();toast(S.editingLibId?'Updated!':'Saved to Library! 📚','success');}
+  if(ok){closeModal('lib-modal');renderLibrary();updateBadges();toast(S.editingLibId?'Updated!':'Saved to library','success');}
   else if(!S.editingLibId)S.library.shift();
 }
 async function deleteLibrary(id){
@@ -2638,7 +2643,7 @@ async function copyLibItem(id,withContextAppId){
   }
   try{
     await navigator.clipboard.writeText(toCopy);
-    toast(withContextAppId?`Copied with ${ctx.company} context ✓`:'Copied to clipboard ✓','success');
+    toast(withContextAppId?`Copied with ${ctx.company} context ✓`:'Copied to clipboard','success');
   }catch(e){toast('Copy failed — your browser may not support clipboard access','error');}
 }
 
@@ -2833,7 +2838,7 @@ async function saveTodo(){
   if(S.editingTodoId){const idx=S.todos.findIndex(x=>x.id===S.editingTodoId);if(idx>=0)S.todos[idx]=item;else S.todos.push(item);}
   else S.todos.unshift(item);
   const ok=await save();
-  if(ok){closeModal('todo-modal');renderTodos();updateBadges();toast(S.editingTodoId?'Updated!':'Task added ✓','success');}
+  if(ok){closeModal('todo-modal');renderTodos();updateBadges();toast(S.editingTodoId?'Updated!':'Task added','success');}
   else if(!S.editingTodoId)S.todos.shift();
 }
 async function deleteTodo(id){
@@ -2851,7 +2856,7 @@ async function toggleTodo(id){
     completed:!t.completed,
     completedAt:!t.completed?new Date().toISOString():null,
     updatedAt:new Date().toISOString()};
-  if(await save()){renderTodos();updateBadges();toast(!t.completed?'Marked complete ✓':'Reopened','success');}
+  if(await save()){renderTodos();updateBadges();toast(!t.completed?'Marked complete':'Reopened','success');}
   else{S.todos=prev;}
 }
 
@@ -2964,7 +2969,7 @@ function openViewModal(id){
       return`<div class="vf">
         <div class="vl">Follow-Up Tracker</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
-          <span style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">🔔 Follow-up Date</span>
+          <span style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">🕐 Follow-up Date</span>
           <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${fuColor}">${fmtDate(fud)}</span>
           ${fst==='overdue'?'<span style="font-size:10px;background:rgba(240,122,58,.15);color:#f07a3a;border:1px solid rgba(240,122,58,.3);border-radius:4px;padding:1px 6px">Overdue</span>':fst==='today'?'<span style="font-size:10px;background:rgba(240,185,50,.15);color:#f0b932;border:1px solid rgba(240,185,50,.3);border-radius:4px;padding:1px 6px">Today!</span>':''}
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
@@ -3102,7 +3107,7 @@ async function saveApiKey(){
     localStorage.setItem('jt_gh',gh);
     localStorage.setItem('jt_gist',gistId);
     document.getElementById('setup-screen').classList.remove('open');
-    go();toast('Connected! 100% free, powered by GitHub 🎉','success');
+    go();toast('Connected — powered by GitHub Gists','success');
   }catch(e){
     const msg=e.name==='AbortError'?'Request timed out — check your internet connection':e.message||'Setup failed — check your token';
     toast(msg,'error');
